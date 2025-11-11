@@ -1,0 +1,23 @@
+site_name: jscip
+site_description: Framework for managing numerical parameters with optional sampling and constraints.
+
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - API Reference: api.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_bases: false
+            show_root_heading: false
+            show_signature_annotations: true
+            members_order: source
