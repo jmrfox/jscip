@@ -27,10 +27,13 @@ Typical usage:
    instances or arrays.
 """
 
+from __future__ import annotations
+
 import numpy as np
 from scipy import stats
 import pandas as pd
 import logging
+from collections.abc import Callable, Iterator, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -82,34 +85,34 @@ class IndependentParameter:
         )
 
     @property
-    def value(self):
+    def value(self) -> float:
         """Get the value of the parameter."""
         return self._value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: float) -> None:
         self._validate_value_and_range(value, self.range)
         self._value = value
         logger.debug("Set value of IndependentParameter to %s", value)
 
     @property
-    def range(self):
+    def range(self) -> tuple[float, float] | None:
         """Get the range of the parameter."""
         return self._range
 
     @range.setter
-    def range(self, range):
+    def range(self, range: tuple[float, float] | None) -> None:
         self._validate_value_and_range(self.value, range)
         self._range = range
         logger.debug("Set range of IndependentParameter to %s", range)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"IndependentParameter(value={self.value}, range={self.range}, is_sampled={self._is_sampled})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__repr__()
 
-    def _validate_value_and_range(self, value, range):
+    def _validate_value_and_range(self, value: float, range: tuple[float, float] | None) -> None:
         """Validate value and range consistency.
 
         Args:
@@ -135,7 +138,7 @@ class IndependentParameter:
             range,
         )
 
-    def sample(self, size: int | None = None):
+    def sample(self, size: int | None = None) -> float | np.ndarray:
         """Sample from the parameter's distribution.
 
         If `is_sampled` is True, draws from a uniform distribution over
@@ -155,7 +158,7 @@ class IndependentParameter:
         logger.debug("Sampled value from IndependentParameter: %s", result)
         return result
 
-    def copy(self):
+    def copy(self) -> IndependentParameter:
         """Return a shallow copy preserving configuration.
 
         Returns:
@@ -184,7 +187,7 @@ class ParameterSet(pd.Series):
     def __repr__(self):
         return f"ParameterSet({super().__repr__()})"
 
-    def satisfies(self, constraint):
+    def satisfies(self, constraint: Callable[[ParameterSet], bool]) -> bool:
         """Evaluate a boolean constraint on this instance.
 
         Args:
@@ -204,7 +207,7 @@ class ParameterSet(pd.Series):
             raise ValueError("Constraint function must return a boolean value.")
         return result
 
-    def copy(self):
+    def copy(self) -> ParameterSet:
         """Return a copy of this parameter set.
 
         Returns:
@@ -214,7 +217,7 @@ class ParameterSet(pd.Series):
         logger.debug("Copied ParameterSet: %s", result)
         return result
 
-    def reindex(self, new_index):
+    def reindex(self, new_index: Sequence[str]) -> ParameterSet:
         """Reindex this instance to a new sequence of parameter names.
 
         Args:
@@ -242,17 +245,17 @@ class DerivedParameter:
     instance is formed or updated.
     """
 
-    def __init__(self, function: callable):
+    def __init__(self, function: Callable[[ParameterSet], float]) -> None:
         self.function = function
         self._is_sampled = False  # Derived parameters are never considered sampled.
         if not callable(self.function):
             raise ValueError("Function must be callable.")
         logger.debug("Initialized DerivedParameter with function %s", self.function)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"DerivedParameter(function={self.function.__name__})"
 
-    def compute(self, parameters: ParameterSet):
+    def compute(self, parameters: ParameterSet) -> float:
         """Compute the derived value for a given parameter set.
 
         Args:
@@ -273,7 +276,7 @@ class DerivedParameter:
         logger.debug("Computed value of DerivedParameter: %s", result)
         return result
 
-    def copy(self):
+    def copy(self) -> DerivedParameter:
         """Return a shallow copy preserving the underlying function.
 
         Returns:
@@ -295,11 +298,11 @@ class ParameterBank:
 
     def __init__(
         self,
-        parameters: dict[str, IndependentParameter | DerivedParameter] = None,
-        constraints: list[callable] = None,
+        parameters: dict[str, IndependentParameter | DerivedParameter] | None = None,
+        constraints: list[Callable[[ParameterSet], bool]] | None = None,
         theta_sampling: bool = False,
-        texnames: dict[str, str] = None,
-    ):
+        texnames: dict[str, str] | None = None,
+    ) -> None:
         self.parameters = parameters if parameters is not None else {}
         self.constraints = constraints if constraints is not None else []
         self.theta_sampling = theta_sampling
@@ -324,7 +327,7 @@ class ParameterBank:
             len(self.constraints),
         )
 
-    def _refresh_sampled_indices(self):
+    def _refresh_sampled_indices(self) -> None:
         """Refresh cached indices for sampled parameters based on current parameters."""
         self.sampled_indices = [
             self.names.index(key)
@@ -334,18 +337,18 @@ class ParameterBank:
         logger.debug("Refreshed sampled indices: %s", self.sampled_indices)
 
     @property
-    def names(self):
+    def names(self) -> list[str]:
         """Get the names of all parameters in the bank.
         This also defines the canonical order of the parameters."""
         return list(self.parameters.keys())
 
     @property
-    def sampled(self):
+    def sampled(self) -> list[str]:
         """Get a list of all parameters that are set to be sampled."""
         return [key for key, param in self.parameters.items() if param._is_sampled]
 
     @property
-    def lower_bounds(self):
+    def lower_bounds(self) -> np.ndarray:
         """Get the lower bounds of all sampled parameters."""
         return np.array(
             [
@@ -356,7 +359,7 @@ class ParameterBank:
         )
 
     @property
-    def upper_bounds(self):
+    def upper_bounds(self) -> np.ndarray:
         """Get the upper bounds of all sampled parameters."""
         return np.array(
             [
@@ -367,33 +370,33 @@ class ParameterBank:
         )
 
     @property
-    def sampled_texnames(self):
+    def sampled_texnames(self) -> list[str]:
         """Get the TeX names of all sampled parameters."""
         return [self.texnames.get(key, key) for key in self.sampled]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"ParameterBank(parameters={self.parameters}, constraints={self.constraints})"
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         """Check if a parameter exists in the bank."""
         return key in self.parameters
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Get the number of parameters in the bank."""
         return len(self.parameters)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         """Iterate over the parameter names in the bank."""
         return iter(self.parameters)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> IndependentParameter | DerivedParameter:
         """Get a parameter by its name."""
         if key in self.parameters:
             return self.parameters[key]
         else:
             raise KeyError(f"Parameter '{key}' not found in the bank.")
 
-    def copy(self):
+    def copy(self) -> ParameterBank:
         """Create a copy of the ParameterBank."""
         result = ParameterBank(
             parameters={k: v.copy() for k, v in self.parameters.items()},
@@ -404,13 +407,13 @@ class ParameterBank:
         logger.debug("Copied ParameterBank: %s", result)
         return result
 
-    def get_value(self, key: str):
+    def get_value(self, key: str) -> float:
         if key in self.parameters:
             return self.parameters[key].value
         else:
             raise KeyError(f"Parameter '{key}' not found in the bank.")
 
-    def merge(self, other: "ParameterBank"):
+    def merge(self, other: "ParameterBank") -> None:
         """Merge another ParameterBank into this one.
         If a parameter with the same name exists, it will be overwritten.
         """
@@ -424,7 +427,7 @@ class ParameterBank:
 
     def add_parameter(
         self, key: str, parameter: IndependentParameter | DerivedParameter
-    ):
+    ) -> None:
         """Add a new parameter to the bank."""
         if not isinstance(parameter, (IndependentParameter, DerivedParameter)):
             raise ValueError(
@@ -435,18 +438,18 @@ class ParameterBank:
         self.parameters[key] = parameter
         logger.debug("Added parameter '%s' to ParameterBank: %s", key, self)
 
-    def add_constraint(self, constraint: callable):
+    def add_constraint(self, constraint: Callable[[ParameterSet], bool]) -> None:
         """Add a new constraint to the bank."""
         if not callable(constraint):
             raise ValueError("Constraint must be a callable function.")
         self.constraints.append(constraint)
         logger.debug("Added constraint '%s' to ParameterBank: %s", constraint, self)
 
-    def get_constraints(self):
+    def get_constraints(self) -> list[Callable[[ParameterSet], bool]]:
         """Get all constraints in the bank."""
         return self.constraints
 
-    def get_default_values(self, return_theta=None):
+    def get_default_values(self, return_theta: bool | None = None) -> ParameterSet | np.ndarray:
         """Return default values for all parameters.
 
         Computes a ``ParameterSet`` by taking the current ``value`` for all
@@ -502,7 +505,7 @@ class ParameterBank:
         else:
             return p
 
-    def instance_to_theta(self, input: ParameterSet | list[ParameterSet]):
+    def instance_to_theta(self, input: ParameterSet | list[ParameterSet]) -> np.ndarray:
         """Convert a parameter instance (or list) to a sampled theta array.
 
         Args:
@@ -540,7 +543,7 @@ class ParameterBank:
             )
         return theta
 
-    def dataframe_to_theta(self, df: pd.DataFrame):
+    def dataframe_to_theta(self, df: pd.DataFrame) -> np.ndarray:
         """Extract sampled parameter columns from a DataFrame as a NumPy array.
 
         Args:
@@ -558,7 +561,7 @@ class ParameterBank:
         theta = df[self.sampled].to_numpy()
         return theta
 
-    def theta_to_instance(self, theta: np.ndarray):
+    def theta_to_instance(self, theta: np.ndarray) -> ParameterSet:
         """Convert a theta array to a parameter instance.
 
         When ``theta_sampling`` is True, ``theta`` must contain only sampled
@@ -620,7 +623,7 @@ class ParameterBank:
         )
         return out
 
-    def _sample_once(self):
+    def _sample_once(self) -> ParameterSet:
         """Sample a single full parameter set (internal).
 
         Samples all sampled independent parameters, computes derived values, and
@@ -656,7 +659,7 @@ class ParameterBank:
         p = self.order(p)
         return p
 
-    def _sample_once_constrained(self):
+    def _sample_once_constrained(self) -> ParameterSet:
         """Sample a single parameter set that satisfies all constraints (internal)."""
         attempts = 0
         while attempts < self._max_attempts:
@@ -669,7 +672,7 @@ class ParameterBank:
             f"Failed to sample a parameter set satisfying constraints after {self._max_attempts} attempts."
         )
 
-    def sample(self, size: int | tuple = None):
+    def sample(self, size: int | tuple | None = None) -> ParameterSet | pd.DataFrame | np.ndarray:
         """Sample parameter sets or theta arrays.
 
         Args:
@@ -747,7 +750,7 @@ class ParameterBank:
                 out = self.instances_to_dataframe([sample for sample in samples])
         return out
 
-    def instances_to_dataframe(self, instances: list[ParameterSet]):
+    def instances_to_dataframe(self, instances: list[ParameterSet]) -> pd.DataFrame:
         """Convert a list of parameter instances to a pandas DataFrame.
 
         Args:
@@ -775,7 +778,7 @@ class ParameterBank:
         df = df.astype(float)
         return df
 
-    def log_prob(self, input: ParameterSet | pd.DataFrame | np.ndarray):
+    def log_prob(self, input: ParameterSet | pd.DataFrame | np.ndarray) -> float | np.ndarray:
         """Compute a simple log prior for samples under uniform bounds.
 
         Anything outside the bounds of sampled independent parameters, or
@@ -843,7 +846,7 @@ class ParameterBank:
         else:
             return results
 
-    def _log_prob_single(self, sample: ParameterSet):
+    def _log_prob_single(self, sample: ParameterSet) -> float:
         """Log prior for a single instance under uniform bounds.
 
         Returns 0.0 if within bounds and satisfying constraints, otherwise
@@ -860,7 +863,7 @@ class ParameterBank:
                     result = -np.inf
         return result
 
-    def order(self, instance: ParameterSet):
+    def order(self, instance: ParameterSet) -> ParameterSet:
         """Reindex an instance to the bank's canonical parameter order.
 
         Args:
@@ -880,7 +883,7 @@ class ParameterBank:
             raise ValueError("Error reordering parameters: " + str(e))
         return out
 
-    def pretty_print(self):
+    def pretty_print(self) -> None:
         """Print a human-readable summary of the bank configuration."""
         print("ParameterBank:")
         print("----------------")
