@@ -1,22 +1,30 @@
-"""
-This module provides a framework for managing scientific parameters, including real-valued parameters
-with optional sampling, constraints, and parameter sets.
+"""jscip main module.
 
-Main classes:
-- `IndependentParameter`: A real-valued parameter with optional sampling and range.
-- `ParameterSet`: A collection of parameters with their scalar values.
-- `ParameterBank`: A bank of parameters, allowing for collective sampling, and constraints.
+This module provides a lightweight framework for defining and managing numerical
+parameters used in scientific workflows. It supports:
 
-Usage:
-- All inputs for a simulator are parameters managed by `ParameterBank`.
-    - **Sampled parameters**: in the traditional meaning of parameters, variables that are optimized/inferred. Set `is_sampled=True`.
-    - **Fixed parameters/inputs**: sim inputs like experimental settings, targets, or controls. Set `is_sampled=False`.
-- A `ParameterBank` represents a `in silico` experiment, i.e., a space of full input configurations.
-- A `ParameterSet` is a single instance of a `ParameterBank`, i.e., a single specific configuration of parameters.
-- Parameters come in two flavors:
-    - `IndependentParameter`: a single parameter with optional sampling and range.
-    - `DerivedParameter`: a parameter derived from a function of other parameters.
+- Independent, real-valued parameters with optional ranges and sampling
+- Derived parameters defined by functions of other parameters
+- Constraint checking on sampled configurations
+- Conversions between rich parameter instances and array/dataframe forms
 
+Key classes:
+
+- `IndependentParameter`: A real-valued parameter with optional sampling over a
+  uniform range.
+- `DerivedParameter`: A read-only parameter computed from a function of a
+  `ParameterSet`.
+- `ParameterSet`: A single configuration (instance) of parameters.
+- `ParameterBank`: A collection of parameters that can be sampled jointly,
+  validated against constraints, and converted between representations.
+
+Typical usage:
+
+1. Create independent parameters, tagging the ones to sample with
+   `is_sampled=True` and providing a `(low, high)` range.
+2. Optionally define derived parameters as functions of the independent ones.
+3. Add parameters to a `ParameterBank`, optionally add constraints, and sample
+   instances or arrays.
 """
 
 import numpy as np
@@ -28,15 +36,20 @@ logger = logging.getLogger(__name__)
 
 
 class IndependentParameter:
-    """A real-valued parameter with optional sampling and range.
+    """A real-valued parameter with optional uniform sampling over a range.
 
-    The value should be set at initialization and may not be changed later. Same for the range, if specified.
-    If is_sampled is True, the parameter will have a uniform distribution over the specified range.
+    This class represents a scalar numeric parameter. When `is_sampled=True`, a
+    uniform distribution over `range=(low, high)` is constructed to draw
+    samples; otherwise the parameter is treated as fixed at `value`.
+
     Attributes:
-        value (float): The value of the parameter.
-        is_sampled (bool): Whether the parameter is sampled from a distribution.
-        range (tuple[float, float] | None): The range of the parameter, if applicable.
+        value: Current scalar value of the parameter.
+        is_sampled: Whether this parameter will be sampled from a distribution.
+        range: Optional inclusive bounds `(low, high)` for the parameter.
 
+    Raises:
+        ValueError: If types are invalid, if the range is malformed, or if the
+            value falls outside the provided range.
     """
 
     def __init__(
@@ -97,7 +110,16 @@ class IndependentParameter:
         return self.__repr__()
 
     def _validate_value_and_range(self, value, range):
-        """Validate the value and range of the parameter."""
+        """Validate value and range consistency.
+
+        Args:
+            value: Candidate scalar value.
+            range: Either `None` or a tuple `(low, high)` with numeric bounds.
+
+        Raises:
+            ValueError: If `value` is non-numeric, `range` is malformed, or
+                `value` is not within the specified range.
+        """
         if not isinstance(value, (int, float)):
             raise ValueError("Value must be a number.")
         if range is not None:
@@ -114,7 +136,18 @@ class IndependentParameter:
         )
 
     def sample(self, size: int | None = None):
-        """Sample a value from the parameter's distribution."""
+        """Sample from the parameter's distribution.
+
+        If `is_sampled` is True, draws from a uniform distribution over
+        `range`. Otherwise, returns the fixed `value`.
+
+        Args:
+            size: Optional number of samples. If omitted, returns a scalar.
+
+        Returns:
+            float | numpy.ndarray: A single float if `size is None`, otherwise
+            a NumPy array of samples.
+        """
         if self._is_sampled:
             result = self._distribution.rvs(size=size)
         else:
@@ -123,7 +156,12 @@ class IndependentParameter:
         return result
 
     def copy(self):
-        """Create a copy of the IndependentParameter."""
+        """Return a shallow copy preserving configuration.
+
+        Returns:
+            IndependentParameter: A new parameter with the same value, range,
+            and sampling flag.
+        """
         result = IndependentParameter(
             value=self.value, is_sampled=self._is_sampled, range=self.range
         )
@@ -132,8 +170,12 @@ class IndependentParameter:
 
 
 class ParameterSet(pd.Series):
-    """A class for parameter sets (aka 'instances'): a single collection of parameters with their scalar values.
-    Mainly to be used as samples from a ParameterBank, but can also be used independently.
+    """A single parameter configuration with scalar values.
+
+    This is a thin wrapper around ``pandas.Series`` used to represent a single
+    instance of parameters, typically produced by sampling a ``ParameterBank``.
+    It preserves the canonical parameter ordering maintained by the bank when
+    reindexed via ``ParameterBank.order``.
     """
 
     def __init__(self, *args, **kwargs):
@@ -143,11 +185,17 @@ class ParameterSet(pd.Series):
         return f"ParameterSet({super().__repr__()})"
 
     def satisfies(self, constraint):
-        """Check if the constraint is satisfied for this parameter set.
-        The constraint should be a callable that takes a ParameterSet
-        and returns a boolean value: True if the constraint is satisfied.
+        """Evaluate a boolean constraint on this instance.
 
-        Maybe redundant, but useful for clarity.
+        Args:
+            constraint: A callable ``f(ps: ParameterSet) -> bool``.
+
+        Returns:
+            bool: True if the constraint is satisfied, otherwise False.
+
+        Raises:
+            ValueError: If ``constraint`` is not callable or does not return a
+                boolean-like value.
         """
         if not callable(constraint):
             raise ValueError("Constraint must be a callable function.")
@@ -157,13 +205,27 @@ class ParameterSet(pd.Series):
         return result
 
     def copy(self):
-        """Create a copy of the ParameterSet."""
+        """Return a copy of this parameter set.
+
+        Returns:
+            ParameterSet: A new instance with the same values.
+        """
         result = ParameterSet(self.to_dict())
         logger.debug("Copied ParameterSet: %s", result)
         return result
 
     def reindex(self, new_index):
-        """Reindex the ParameterSet to a new index."""
+        """Reindex this instance to a new sequence of parameter names.
+
+        Args:
+            new_index: Iterable of parameter names specifying the new order.
+
+        Returns:
+            ParameterSet: A new instance with the requested index.
+
+        Raises:
+            ValueError: If ``new_index`` is not a list or tuple.
+        """
         if not isinstance(new_index, (list, tuple)):
             raise ValueError("New index must be a list or tuple of parameter names.")
         new_series = super().reindex(new_index)
@@ -173,7 +235,12 @@ class ParameterSet(pd.Series):
 
 
 class DerivedParameter:
-    """A parameter derived from a function of other parameters."""
+    """A read-only parameter computed from other parameters.
+
+    A ``DerivedParameter`` wraps a function that maps a ``ParameterSet`` to a
+    scalar value. It is not sampled directly and is recomputed whenever an
+    instance is formed or updated.
+    """
 
     def __init__(self, function: callable):
         self.function = function
@@ -186,7 +253,18 @@ class DerivedParameter:
         return f"DerivedParameter(function={self.function.__name__})"
 
     def compute(self, parameters: ParameterSet):
-        """Compute the value of the derived parameter based on the provided parameters."""
+        """Compute the derived value for a given parameter set.
+
+        Args:
+            parameters: The ``ParameterSet`` providing inputs to the function.
+
+        Returns:
+            float: The computed scalar value.
+
+        Raises:
+            ValueError: If ``parameters`` is not a ``ParameterSet`` or the
+                stored function is not callable.
+        """
         if not isinstance(parameters, ParameterSet):
             raise ValueError("Parameters must be an instance of ParameterSet.")
         if not callable(self.function):
@@ -196,18 +274,23 @@ class DerivedParameter:
         return result
 
     def copy(self):
-        """Create a copy of the DerivedParameter."""
+        """Return a shallow copy preserving the underlying function.
+
+        Returns:
+            DerivedParameter: A new wrapper around the same function.
+        """
         result = DerivedParameter(function=self.function)
         logger.debug("Copied DerivedParameter: %s", result)
         return result
 
 
 class ParameterBank:
-    """A bank of parameters, allowing for collective sampling, and constraints.
-    Parameters can be either IndependentParameter or DerivedParameter.
-    A DerivedParameter should depend on IndependentParameters in the bank, not other DerivedParameters.
+    """A collection of parameters with sampling, constraints, and conversions.
 
-    Constraints can be added to ensure that sampled parameters meet certain conditions.
+    The bank stores independent and derived parameters, optional constraint
+    functions, and a canonical parameter order. It can sample full parameter
+    instances, validate them against constraints, and convert between rich
+    ``ParameterSet`` and array/dataframe representations.
     """
 
     def __init__(
@@ -364,9 +447,24 @@ class ParameterBank:
         return self.constraints
 
     def get_default_values(self, return_theta=None):
-        """Get the default values for all parameters in the bank.
+        """Return default values for all parameters.
 
-        return_theta: If True, return a numpy array. If False, return a ParameterSet instance.
+        Computes a ``ParameterSet`` by taking the current ``value`` for all
+        independent parameters and computing all derived parameters from those
+        values. Optionally, returns the sampled subset as a NumPy array when
+        ``return_theta=True``.
+
+        Args:
+            return_theta: If True, return a 1D NumPy array of sampled parameter
+                values in canonical sampled order. If False, return a full
+                ``ParameterSet``. Defaults to ``self.theta_sampling``.
+
+        Returns:
+            ParameterSet | numpy.ndarray: The default instance or the sampled
+            values array.
+
+        Raises:
+            ValueError: If ``return_theta`` is not a boolean.
         """
         if return_theta is None:
             return_theta = (
@@ -405,7 +503,20 @@ class ParameterBank:
             return p
 
     def instance_to_theta(self, input: ParameterSet | list[ParameterSet]):
-        """Convert a ParameterSetInstance to a numpy array of sampled values."""
+        """Convert a parameter instance (or list) to a sampled theta array.
+
+        Args:
+            input: A single ``ParameterSet`` or list of ``ParameterSet``
+                instances.
+
+        Returns:
+            numpy.ndarray: 1D array for a single instance or 2D array for a
+            list of instances, containing values for sampled parameters only,
+            in canonical sampled order.
+
+        Raises:
+            ValueError: If ``input`` is not a ``ParameterSet`` or list thereof.
+        """
         if not isinstance(input, (ParameterSet, list)):
             raise ValueError(
                 "Input must be a ParameterSetInstance or a list of ParameterSetInstances."
@@ -430,14 +541,40 @@ class ParameterBank:
         return theta
 
     def dataframe_to_theta(self, df: pd.DataFrame):
-        """Convert a pandas DataFrame of sampled values to a numpy array."""
+        """Extract sampled parameter columns from a DataFrame as a NumPy array.
+
+        Args:
+            df: DataFrame containing sampled parameter columns.
+
+        Returns:
+            numpy.ndarray: 2D array of sampled values in canonical sampled
+            order.
+
+        Raises:
+            ValueError: If ``df`` is not a pandas DataFrame.
+        """
         if not isinstance(df, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame.")
         theta = df[self.sampled].to_numpy()
         return theta
 
     def theta_to_instance(self, theta: np.ndarray):
-        """Convert a numpy array vector of sampled values to a ParameterSetInstance."""
+        """Convert a theta array to a parameter instance.
+
+        When ``theta_sampling`` is True, ``theta`` must contain only sampled
+        independent parameters in canonical sampled order. Otherwise, it must
+        contain values for all independent parameters in canonical order.
+
+        Args:
+            theta: 1D NumPy array.
+
+        Returns:
+            ParameterSet: A full instance with derived parameters recomputed.
+
+        Raises:
+            ValueError: If shapes are inconsistent with ``theta_sampling`` or
+                if ``theta`` is not a NumPy array.
+        """
         if not isinstance(theta, np.ndarray):
             raise ValueError(
                 "Input must be a numpy array, instead got: " + str(type(theta))
@@ -484,7 +621,11 @@ class ParameterBank:
         return out
 
     def _sample_once(self):
-        """Sample a single set of parameters from the bank."""
+        """Sample a single full parameter set (internal).
+
+        Samples all sampled independent parameters, computes derived values, and
+        returns a ``ParameterSet`` ordered canonically.
+        """
         # first, sample all independent parameters that are set to be sampled
         p = ParameterSet(
             {
@@ -516,7 +657,7 @@ class ParameterBank:
         return p
 
     def _sample_once_constrained(self):
-        """Sample a single set of parameters from the bank, satisfying a constraint function."""
+        """Sample a single parameter set that satisfies all constraints (internal)."""
         attempts = 0
         while attempts < self._max_attempts:
             attempts += 1
@@ -529,7 +670,20 @@ class ParameterBank:
         )
 
     def sample(self, size: int | tuple = None):
-        """Sample a set of parameters from the bank."""
+        """Sample parameter sets or theta arrays.
+
+        Args:
+            size: If ``None``, returns a single instance. If ``int``, returns a
+                batch. If ``tuple``, returns product size; multi-d shapes are
+                only supported when ``theta_sampling`` is True.
+
+        Returns:
+            ParameterSet | pandas.DataFrame | numpy.ndarray: Depending on
+            ``theta_sampling`` and ``size``.
+
+        Raises:
+            ValueError: If ``size`` has an invalid type or dimensionality.
+        """
         if (
             size is not None
             and not isinstance(size, int)
@@ -594,7 +748,19 @@ class ParameterBank:
         return out
 
     def instances_to_dataframe(self, instances: list[ParameterSet]):
-        """Convert a list of ParameterSetInstances to a pandas DataFrame."""
+        """Convert a list of parameter instances to a pandas DataFrame.
+
+        Args:
+            instances: A non-empty list of ``ParameterSet`` objects.
+
+        Returns:
+            pandas.DataFrame: Rows correspond to instances; columns to
+            parameters in canonical order.
+
+        Raises:
+            ValueError: If the input is not a non-empty list of ``ParameterSet``
+                objects.
+        """
         if not isinstance(instances, list):
             raise ValueError(
                 "Instances must be a list of ParameterSetInstance objects."
@@ -610,11 +776,23 @@ class ParameterBank:
         return df
 
     def log_prob(self, input: ParameterSet | pd.DataFrame | np.ndarray):
-        """Calculate the log prior probability of a list of samples.
-        Input can be a list of ParameterSet instances or a numpy array.
-        In the case of a numpy array, it should be 1D or 2D, where each row is a sample.
+        """Compute a simple log prior for samples under uniform bounds.
 
-        Returns 0 if within bounds, or -inf if the sample is outside the bounds.
+        Anything outside the bounds of sampled independent parameters, or
+        violating constraints, receives ``-inf``; otherwise ``0``.
+
+        Args:
+            input: A ``ParameterSet``, a pandas ``DataFrame`` (rows are
+                instances), or a NumPy array (1D or 2D). For arrays, the
+                expected width depends on ``theta_sampling``.
+
+        Returns:
+            float | numpy.ndarray: A scalar for a single ``ParameterSet`` or a
+            NumPy array of log-probabilities for batches.
+
+        Raises:
+            ValueError: If the type/shape of ``input`` is inconsistent with the
+                current ``theta_sampling`` mode.
         """
         # categorize inputs
         if isinstance(input, ParameterSet):  # if a single sample, package it in a list
@@ -666,7 +844,11 @@ class ParameterBank:
             return results
 
     def _log_prob_single(self, sample: ParameterSet):
-        """Calculate the log prior probability of a single sample."""
+        """Log prior for a single instance under uniform bounds.
+
+        Returns 0.0 if within bounds and satisfying constraints, otherwise
+        ``-inf``.
+        """
         if sample is None or not isinstance(sample, ParameterSet):
             raise ValueError("Sample must be an instance of ParameterSet.")
         result = 0.0
@@ -679,7 +861,17 @@ class ParameterBank:
         return result
 
     def order(self, instance: ParameterSet):
-        """Reorder the parameters in the instance according to the canonical order."""
+        """Reindex an instance to the bank's canonical parameter order.
+
+        Args:
+            instance: The ``ParameterSet`` to reindex.
+
+        Returns:
+            ParameterSet: A new instance with parameters ordered canonically.
+
+        Raises:
+            ValueError: If reindexing fails (e.g., missing keys).
+        """
         if not isinstance(instance, ParameterSet):
             raise ValueError("Input must be an instance of ParameterSet.")
         try:
@@ -689,7 +881,7 @@ class ParameterBank:
         return out
 
     def pretty_print(self):
-        """Print a formatted summary of the bank."""
+        """Print a human-readable summary of the bank configuration."""
         print("ParameterBank:")
         print("----------------")
         for name, param in self.parameters.items():

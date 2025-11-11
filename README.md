@@ -1,6 +1,6 @@
-# jscip
+# Jordan's Scientific Parameters
 
-```
+```text
                                /$$          
                               |__/          
        /$$  /$$$$$$$  /$$$$$$$ /$$  /$$$$$$ 
@@ -14,6 +14,6 @@
  \______/                         |__/
 ```
 
-(Jordan's Scientific Parameters)
+[Documentation](https://jmrfox.github.io/jscip/)
 
 This package has developed to ease the process of managing scientific parameters, including real-valued parameters with ranges, constraints, dependencies, and sampling.
