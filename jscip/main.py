@@ -17,24 +17,6 @@ Usage:
     - `IndependentParameter`: a single parameter with optional sampling and range.
     - `DerivedParameter`: a parameter derived from a function of other parameters.
 
-Example:
-Specify parameters for an atomic nucleus with 3 protons and 3 neutrons.
-Vary the Coulomb force independently from 1 to 10.
-Compute the mass number A = N + Z as a derived parameter.
-```
-pbank = ParameterBank({
-    "N": 3,
-    "Z": 3,
-    "Coulomb_force": IndependentParameter(1.0, is_sampled=True, range=(1.0, 10.0)),
-    "A": DerivedParameter(lambda params: params["N"] + params["Z"]),
-})
-```
-This bank can be sampled to generate a set of parameters for the simulator, each of which will contain a valid instance of inputs.
-```
-sample = pbank.sample()
-```
-will return a `ParameterSet` with values for all parameters.
-
 """
 
 import numpy as np
