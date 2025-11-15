@@ -60,23 +60,179 @@ class IndependentParameter:
         value: float,
         is_sampled: bool = False,
         range: tuple[float, float] | None = None,
+        distribution: object | None = None,
+        unit: object | None = None,
+        param_type: type | None = None,
     ):
         self._validate_value_and_range(value, range)
         self._value = value
         self._range = range
         self._is_sampled = is_sampled
 
-        if is_sampled and (range is None or len(range) != 2):
-            raise ValueError(
-                "If is_sampled is True, range must be a tuple of two numeric values."
-            )
-
-        if is_sampled and range is not None:
-            self._distribution = stats.uniform(
-                loc=self.range[0], scale=self.range[1] - self.range[0]
-            )
+        # Infer the parameter type from the provided value when not specified
+        # explicitly. Currently only float and int are supported.
+        if param_type is None:
+            if isinstance(value, int):
+                self._type = int
+            elif isinstance(value, float):
+                self._type = float
+            else:
+                raise ValueError("param_type must be float or int, or value must be int/float.")
         else:
-            self._distribution = None
+            if param_type not in (float, int):
+                raise ValueError("param_type must be float or int.")
+            self._type = param_type
+
+        # Store the raw distribution configuration/object so that copy() can
+        # faithfully reproduce the sampling behavior.
+        self._distribution_config = distribution
+
+        # Optional unit associated with this parameter. Units are not used in
+        # internal calculations but can be applied on readout if requested.
+        self._unit = unit
+
+        # Configure the underlying scipy.stats distribution. By default, when
+        # no explicit distribution is provided, a uniform distribution over
+        # ``range`` is used (for backwards compatibility). When
+        # ``distribution`` is provided, it may be either (a) a configuration
+        # dict describing a common distribution or (b) a user-supplied
+        # scipy.stats frozen distribution object.
+        self._distribution = None
+        if is_sampled:
+            if distribution is None:
+                if range is None or len(range) != 2:
+                    raise ValueError(
+                        "If is_sampled is True, range must be a tuple of two numeric values."
+                    )
+                # Default behavior: uniform over the given range.
+                self._distribution = stats.uniform(
+                    loc=self.range[0], scale=self.range[1] - self.range[0]
+                )
+            else:
+                # Accept either a user-supplied scipy.stats frozen
+                # distribution (duck-typed via rvs attribute) or a small
+                # configuration dict specifying a common distribution.
+                if hasattr(distribution, "rvs"):
+                    self._distribution = distribution
+                elif isinstance(distribution, dict):
+                    kind = distribution.get("kind")
+                    if kind == "uniform":
+                        # Allow overriding uniform via config; fall back to
+                        # the explicit range bounds when present.
+                        if range is not None and len(range) == 2:
+                            low, high = range
+                        else:
+                            low = distribution.get("low")
+                            high = distribution.get("high")
+                        if low is None or high is None:
+                            raise ValueError(
+                                "Uniform distribution requires 'low' and 'high' when range is not provided."
+                            )
+                        self._distribution = stats.uniform(
+                            loc=low, scale=high - low
+                        )
+                    elif kind == "normal":
+                        if self._type is int:
+                            raise ValueError(
+                                "Integer parameters cannot use a normal distribution configuration."
+                            )
+                        loc = distribution.get("loc", value)
+                        scale = distribution.get("scale", 1.0)
+                        self._distribution = stats.norm(loc=loc, scale=scale)
+                    elif kind == "lognormal":
+                        if self._type is int:
+                            raise ValueError(
+                                "Integer parameters cannot use a lognormal distribution configuration."
+                            )
+                        s = distribution.get("s")
+                        if s is None:
+                            raise ValueError(
+                                "Lognormal distribution configuration must include parameter 's'."
+                            )
+                        scale = distribution.get("scale", 1.0)
+                        self._distribution = stats.lognorm(s=s, scale=scale)
+                    elif kind == "exponential":
+                        if self._type is int:
+                            raise ValueError(
+                                "Integer parameters cannot use an exponential distribution configuration."
+                            )
+                        # Parameterized by scale (1 / rate).
+                        scale = distribution.get("scale", 1.0)
+                        self._distribution = stats.expon(scale=scale)
+                    elif kind == "gamma":
+                        if self._type is int:
+                            raise ValueError(
+                                "Integer parameters cannot use a gamma distribution configuration."
+                            )
+                        a = distribution.get("a")
+                        if a is None:
+                            raise ValueError(
+                                "Gamma distribution configuration must include shape parameter 'a'."
+                            )
+                        scale = distribution.get("scale", 1.0)
+                        self._distribution = stats.gamma(a=a, scale=scale)
+                    elif kind == "bernoulli":
+                        p = distribution.get("p")
+                        if p is None:
+                            raise ValueError(
+                                "Bernoulli distribution configuration must include parameter 'p'."
+                            )
+                        self._distribution = stats.bernoulli(p)
+                    elif kind == "poisson":
+                        if self._type is not int:
+                            raise ValueError(
+                                "Poisson distribution is only supported for integer parameters."
+                            )
+                        mu = distribution.get("mu")
+                        if mu is None:
+                            raise ValueError(
+                                "Poisson distribution configuration must include parameter 'mu'."
+                            )
+                        self._distribution = stats.poisson(mu=mu)
+                    elif kind == "binomial":
+                        if self._type is not int:
+                            raise ValueError(
+                                "Binomial distribution is only supported for integer parameters."
+                            )
+                        n = distribution.get("n")
+                        p = distribution.get("p")
+                        if n is None or p is None:
+                            raise ValueError(
+                                "Binomial distribution configuration must include parameters 'n' and 'p'."
+                            )
+                        self._distribution = stats.binom(n=n, p=p)
+                    elif kind == "discrete_uniform":
+                        if self._type is not int:
+                            raise ValueError(
+                                "Discrete uniform distribution is only supported for integer parameters."
+                            )
+                        low = distribution.get("low")
+                        high = distribution.get("high")
+                        if low is None or high is None:
+                            raise ValueError(
+                                "Discrete uniform distribution requires 'low' and 'high'."
+                            )
+                        # stats.randint is defined on [low, high), so use high+1 for inclusive bounds.
+                        self._distribution = stats.randint(low, high + 1)
+                    elif kind == "geometric":
+                        if self._type is not int:
+                            raise ValueError(
+                                "Geometric distribution is only supported for integer parameters."
+                            )
+                        p = distribution.get("p")
+                        if p is None:
+                            raise ValueError(
+                                "Geometric distribution configuration must include parameter 'p'."
+                            )
+                        self._distribution = stats.geom(p)
+                    else:
+                        raise ValueError(
+                            f"Unsupported distribution kind: {kind}."
+                        )
+                else:
+                    raise ValueError(
+                        "distribution must be either a scipy.stats frozen distribution or a configuration dict."
+                    )
         logger.debug(
             "Initialized IndependentParameter with value %s, range %s, is_sampled %s",
             value,
@@ -138,7 +294,7 @@ class IndependentParameter:
             range,
         )
 
-    def sample(self, size: int | None = None) -> float | np.ndarray:
+    def sample(self, size: int | None = None, return_unit: bool = False) -> float | np.ndarray | object:
         """Sample from the parameter's distribution.
 
         If `is_sampled` is True, draws from a uniform distribution over
@@ -155,6 +311,16 @@ class IndependentParameter:
             result = self._distribution.rvs(size=size)
         else:
             result = self.value
+
+        # Cast to the requested scalar type before applying any units.
+        if self._type is int:
+            if isinstance(result, np.ndarray):
+                result = result.astype(int)
+            else:
+                result = int(result)
+        if return_unit and self._unit is not None:
+            # Defer to the unit object's multiplication semantics.
+            result = result * self._unit
         logger.debug("Sampled value from IndependentParameter: %s", result)
         return result
 
@@ -166,7 +332,12 @@ class IndependentParameter:
             and sampling flag.
         """
         result = IndependentParameter(
-            value=self.value, is_sampled=self._is_sampled, range=self.range
+            value=self.value,
+            is_sampled=self._is_sampled,
+            range=self.range,
+            distribution=self._distribution_config,
+            unit=self._unit,
+            param_type=self._type,
         )
         logger.debug("Copied IndependentParameter: %s", result)
         return result
@@ -245,9 +416,13 @@ class DerivedParameter:
     instance is formed or updated.
     """
 
-    def __init__(self, function: Callable[[ParameterSet], float]) -> None:
+    def __init__(self, function: Callable[[ParameterSet], float], unit: object | None = None) -> None:
         self.function = function
         self._is_sampled = False  # Derived parameters are never considered sampled.
+        # Optional unit associated with this derived parameter. Units are not
+        # used in internal calculations but can be applied on readout if
+        # requested at the bank level.
+        self._unit = unit
         if not callable(self.function):
             raise ValueError("Function must be callable.")
         logger.debug("Initialized DerivedParameter with function %s", self.function)
@@ -282,7 +457,7 @@ class DerivedParameter:
         Returns:
             DerivedParameter: A new wrapper around the same function.
         """
-        result = DerivedParameter(function=self.function)
+        result = DerivedParameter(function=self.function, unit=self._unit)
         logger.debug("Copied DerivedParameter: %s", result)
         return result
 
@@ -300,12 +475,15 @@ class ParameterBank:
         self,
         parameters: dict[str, IndependentParameter | DerivedParameter] | None = None,
         constraints: list[Callable[[ParameterSet], bool]] | None = None,
-        theta_sampling: bool = False,
+        vector_mode: bool = False,
         texnames: dict[str, str] | None = None,
     ) -> None:
         self.parameters = parameters if parameters is not None else {}
         self.constraints = constraints if constraints is not None else []
-        self.theta_sampling = theta_sampling
+        # When True, sampling and conversions operate on parameter vectors
+        # that contain only sampled independent parameters, in canonical
+        # sampled order. When False, conversions expect full configurations.
+        self.vector_mode = vector_mode
         self._max_attempts = (
             100  # Default maximum attempts for sampling with constraints
         )
@@ -401,7 +579,7 @@ class ParameterBank:
         result = ParameterBank(
             parameters={k: v.copy() for k, v in self.parameters.items()},
             constraints=self.constraints.copy(),
-            theta_sampling=self.theta_sampling,
+            vector_mode=self.vector_mode,
             texnames=self.texnames.copy(),
         )
         logger.debug("Copied ParameterBank: %s", result)
@@ -449,32 +627,32 @@ class ParameterBank:
         """Get all constraints in the bank."""
         return self.constraints
 
-    def get_default_values(self, return_theta: bool | None = None) -> ParameterSet | np.ndarray:
+    def get_default_values(self, return_vector: bool | None = None, with_units: bool = False) -> ParameterSet | np.ndarray:
         """Return default values for all parameters.
 
         Computes a ``ParameterSet`` by taking the current ``value`` for all
         independent parameters and computing all derived parameters from those
-        values. Optionally, returns the sampled subset as a NumPy array when
-        ``return_theta=True``.
+        values. Optionally, returns the sampled subset as a NumPy array (a
+        parameter vector) when ``return_vector=True``.
 
         Args:
-            return_theta: If True, return a 1D NumPy array of sampled parameter
-                values in canonical sampled order. If False, return a full
-                ``ParameterSet``. Defaults to ``self.theta_sampling``.
+            return_vector: If True, return a 1D NumPy array of sampled
+                parameter values in canonical sampled order. If False, return
+                a full ``ParameterSet``. Defaults to ``self.vector_mode``.
 
         Returns:
             ParameterSet | numpy.ndarray: The default instance or the sampled
             values array.
 
         Raises:
-            ValueError: If ``return_theta`` is not a boolean.
+            ValueError: If ``return_vector`` is not a boolean.
         """
-        if return_theta is None:
-            return_theta = (
-                self.theta_sampling
-            )  # default to self.theta_sampling if not specified
-        if not isinstance(return_theta, bool):
-            raise ValueError("theta_array must be a boolean value.")
+        if return_vector is None:
+            return_vector = (
+                self.vector_mode
+            )  # default to self.vector_mode if not specified
+        if not isinstance(return_vector, bool):
+            raise ValueError("return_vector must be a boolean value.")
         p = ParameterSet(
             {
                 key: param.value
@@ -500,13 +678,27 @@ class ParameterBank:
         logger.debug(
             "[get_default_values] Default values for all parameters in the bank: %s", p
         )
-        if return_theta:
-            return self.instance_to_theta(p)
-        else:
-            return p
+        if return_vector:
+            # Parameter vectors are always returned as plain numeric arrays.
+            return self.instance_to_vector(p)
+        if with_units:
+            # Apply units on readout for independent parameters that have them,
+            # constructing a new ParameterSet to avoid dtype mutation warnings.
+            data: dict[str, object] = {}
+            for key in p.index:
+                value = p[key]
+                param = self.parameters.get(key)
+                if isinstance(param, (IndependentParameter, DerivedParameter)) and getattr(
+                    param, "_unit", None
+                ) is not None:
+                    data[key] = value * param._unit
+                else:
+                    data[key] = value
+            return ParameterSet(data)
+        return p
 
-    def instance_to_theta(self, input: ParameterSet | list[ParameterSet]) -> np.ndarray:
-        """Convert a parameter instance (or list) to a sampled theta array.
+    def instance_to_vector(self, input: ParameterSet | list[ParameterSet]) -> np.ndarray:
+        """Convert a parameter instance (or list) to a sampled parameter vector.
 
         Args:
             input: A single ``ParameterSet`` or list of ``ParameterSet``
@@ -522,28 +714,29 @@ class ParameterBank:
         """
         if not isinstance(input, (ParameterSet, list)):
             raise ValueError(
-                "Input must be a ParameterSetInstance or a list of ParameterSetInstances."
+                "Input must be a ParameterSet or a list of ParameterSet objects."
             )
         if isinstance(input, ParameterSet):
-            theta = np.array([input[key] for key in self.sampled])
+            vector = np.array([input[key] for key in self.sampled])
             logger.debug(
-                "[instance_to_theta] Converted ParameterSet to numpy array: %s", theta
+                "[instance_to_vector] Converted ParameterSet to numpy array: %s",
+                vector,
             )
         else:
             # return a 2D array of shape (n_instances, n_sampled)
-            theta = np.vstack(
+            vector = np.vstack(
                 [
                     np.array([instance[key] for key in self.sampled])
                     for instance in input
                 ]
             )
             logger.debug(
-                "[instance_to_theta] Converted list of ParameterSetInstances to numpy array: %s",
-                theta,
+                "[instance_to_vector] Converted list of ParameterSet objects to numpy array: %s",
+                vector,
             )
-        return theta
+        return vector
 
-    def dataframe_to_theta(self, df: pd.DataFrame) -> np.ndarray:
+    def dataframe_to_vector(self, df: pd.DataFrame) -> np.ndarray:
         """Extract sampled parameter columns from a DataFrame as a NumPy array.
 
         Args:
@@ -558,58 +751,58 @@ class ParameterBank:
         """
         if not isinstance(df, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame.")
-        theta = df[self.sampled].to_numpy()
-        return theta
+        vector = df[self.sampled].to_numpy()
+        return vector
 
-    def theta_to_instance(self, theta: np.ndarray) -> ParameterSet:
-        """Convert a theta array to a parameter instance.
+    def vector_to_instance(self, vector: np.ndarray) -> ParameterSet:
+        """Convert a parameter vector to a parameter instance.
 
-        When ``theta_sampling`` is True, ``theta`` must contain only sampled
+        When ``vector_mode`` is True, ``vector`` must contain only sampled
         independent parameters in canonical sampled order. Otherwise, it must
         contain values for all independent parameters in canonical order.
 
         Args:
-            theta: 1D NumPy array.
+            vector: 1D NumPy array.
 
         Returns:
             ParameterSet: A full instance with derived parameters recomputed.
 
         Raises:
-            ValueError: If shapes are inconsistent with ``theta_sampling`` or
-                if ``theta`` is not a NumPy array.
+            ValueError: If shapes are inconsistent with ``vector_mode`` or
+                if ``vector`` is not a NumPy array.
         """
-        if not isinstance(theta, np.ndarray):
+        if not isinstance(vector, np.ndarray):
             raise ValueError(
-                "Input must be a numpy array, instead got: " + str(type(theta))
+                "Input must be a numpy array, instead got: " + str(type(vector))
             )
-        # validate length depending on theta_sampling mode
-        if self.theta_sampling:
-            if len(theta) != len(self.sampled):
+        # validate length depending on vector_mode
+        if self.vector_mode:
+            if len(vector) != len(self.sampled):
                 raise ValueError(
-                    f"Array length {len(theta)} does not match number of sampled parameters {len(self.sampled)}."
+                    f"Array length {len(vector)} does not match number of sampled parameters {len(self.sampled)}."
                 )
         else:
-            if len(theta) != len(self.parameters):
+            if len(vector) != len(self.parameters):
                 raise ValueError(
-                    f"Array length {len(theta)} does not match number of parameters {len(self.parameters)}."
+                    f"Array length {len(vector)} does not match number of parameters {len(self.parameters)}."
                 )
-        # theta in this case must be a 1D array
+        # vector in this case must be a 1D array
         # Start with defaults
-        out = self.get_default_values(return_theta=False)
-        if self.theta_sampling:
-            # theta provides only sampled independent parameters
+        out = self.get_default_values(return_vector=False)
+        if self.vector_mode:
+            # vector provides only sampled independent parameters
             for i, key in enumerate(self.sampled):
-                out[key] = theta[i]
+                out[key] = vector[i]
         else:
-            # theta provides values for ALL parameters in canonical order
-            if len(theta) != len(self.parameters):
+            # vector provides values for ALL parameters in canonical order
+            if len(vector) != len(self.parameters):
                 raise ValueError(
-                    f"Array length {len(theta)} does not match number of parameters {len(self.parameters)}."
+                    f"Array length {len(vector)} does not match number of parameters {len(self.parameters)}."
                 )
             for i, key in enumerate(self.names):
                 param = self.parameters[key]
                 if isinstance(param, IndependentParameter):
-                    out[key] = float(theta[i])
+                    out[key] = float(vector[i])
         # recompute derived parameters
         out = ParameterSet(
             {
@@ -672,17 +865,17 @@ class ParameterBank:
             f"Failed to sample a parameter set satisfying constraints after {self._max_attempts} attempts."
         )
 
-    def sample(self, size: int | tuple | None = None) -> ParameterSet | pd.DataFrame | np.ndarray:
-        """Sample parameter sets or theta arrays.
+    def sample(self, size: int | tuple | None = None, with_units: bool = False) -> ParameterSet | pd.DataFrame | np.ndarray:
+        """Sample parameter sets or parameter vectors.
 
         Args:
             size: If ``None``, returns a single instance. If ``int``, returns a
                 batch. If ``tuple``, returns product size; multi-d shapes are
-                only supported when ``theta_sampling`` is True.
+                only supported when ``vector_mode`` is True.
 
         Returns:
             ParameterSet | pandas.DataFrame | numpy.ndarray: Depending on
-            ``theta_sampling`` and ``size``.
+            ``vector_mode`` and ``size``.
 
         Raises:
             ValueError: If ``size`` has an invalid type or dimensionality.
@@ -698,9 +891,9 @@ class ParameterBank:
         elif isinstance(size, int):
             n_samples = size
         elif isinstance(size, tuple):
-            if len(size) > 1 and not self.theta_sampling:
+            if len(size) > 1 and not self.vector_mode:
                 raise ValueError(
-                    "Multiple dimensions are only supported for theta_sampling."
+                    "Multiple dimensions are only supported for vector mode."
                 )
             if len(size) == 1:
                 n_samples = size[0]
@@ -729,21 +922,36 @@ class ParameterBank:
             )
             samples.append(sample)
         # print("After sampling, there are", len(samples), "samples.")
-        if self.theta_sampling:
-            # out = np.array([self.instance_to_theta(sample) for sample in samples])
+        if self.vector_mode:
             if size is None:
-                out = self.instance_to_theta(samples[0])
+                out = self.instance_to_vector(samples[0])
             elif isinstance(size, int):
                 out = np.array(
-                    [self.instance_to_theta(sample) for sample in samples]
+                    [self.instance_to_vector(sample) for sample in samples]
                 ).reshape((size, len(self.sampled)))
             elif isinstance(size, tuple):
                 out = np.array(
-                    [self.instance_to_theta(sample) for sample in samples]
+                    [self.instance_to_vector(sample) for sample in samples]
                 ).reshape(size + (len(self.sampled),))
         else:
             if size is None:
-                out = samples[0]
+                base = samples[0]
+                if with_units:
+                    # Apply units on readout for independent parameters that have them,
+                    # constructing a new ParameterSet to avoid dtype mutation warnings.
+                    data: dict[str, object] = {}
+                    for key in base.index:
+                        value = base[key]
+                        param = self.parameters.get(key)
+                        if isinstance(param, (IndependentParameter, DerivedParameter)) and getattr(
+                            param, "_unit", None
+                        ) is not None:
+                            data[key] = value * param._unit
+                        else:
+                            data[key] = value
+                    out = ParameterSet(data)
+                else:
+                    out = base
             elif isinstance(size, int):
                 out = self.instances_to_dataframe([sample for sample in samples])
             elif isinstance(size, tuple):
@@ -787,7 +995,7 @@ class ParameterBank:
         Args:
             input: A ``ParameterSet``, a pandas ``DataFrame`` (rows are
                 instances), or a NumPy array (1D or 2D). For arrays, the
-                expected width depends on ``theta_sampling``.
+                expected width depends on ``vector_mode``.
 
         Returns:
             float | numpy.ndarray: A scalar for a single ``ParameterSet`` or a
@@ -795,7 +1003,7 @@ class ParameterBank:
 
         Raises:
             ValueError: If the type/shape of ``input`` is inconsistent with the
-                current ``theta_sampling`` mode.
+                current ``vector_mode`` mode.
         """
         # categorize inputs
         if isinstance(input, ParameterSet):  # if a single sample, package it in a list
@@ -807,30 +1015,30 @@ class ParameterBank:
         elif isinstance(input, np.ndarray):  # if numpy array ...
             if input.ndim == 1:  # if 1D, treat as a single sample
                 if (
-                    input.shape[0] != len(self.sampled) and self.theta_sampling
-                ):  # if theta_sampling is enabled, sample must match sampled parameters
+                    input.shape[0] != len(self.sampled) and self.vector_mode
+                ):  # if vector_mode is enabled, sample must match sampled parameters
                     raise ValueError(
-                        f"1D numpy array must have length {len(self.sampled)} to match sampled parameters, since theta_sampling is enabled."
+                        f"1D numpy array must have length {len(self.sampled)} to match sampled parameters, since vector_mode is enabled."
                     )
                 elif (
-                    input.shape[0] != len(self.parameters) and not self.theta_sampling
-                ):  # if theta_sampling is disabled, sample must match all parameters
+                    input.shape[0] != len(self.parameters) and not self.vector_mode
+                ):  # if vector_mode is disabled, sample must match all parameters
                     raise ValueError(
-                        f"1D numpy array must have length {len(self.parameters)} to match all parameters, since theta_sampling is disabled."
+                        f"1D numpy array must have length {len(self.parameters)} to match all parameters, since vector_mode is disabled."
                     )
                 # print("Converting 1D numpy array to ParameterSet instance.")
-                samples = [self.theta_to_instance(input)]  # convert to ParameterSet
+                samples = [self.vector_to_instance(input)]  # convert to ParameterSet
             elif input.ndim == 2:  # if 2D, treat each row as a sample
-                if input.shape[1] != len(self.sampled) and self.theta_sampling:
+                if input.shape[1] != len(self.sampled) and self.vector_mode:
                     raise ValueError(
-                        f"2D numpy array must have {len(self.sampled)} columns to match sampled parameters, since theta_sampling is enabled."
+                        f"2D numpy array must have {len(self.sampled)} columns to match sampled parameters, since vector_mode is enabled."
                     )
-                elif input.shape[1] != len(self.parameters) and not self.theta_sampling:
+                elif input.shape[1] != len(self.parameters) and not self.vector_mode:
                     raise ValueError(
-                        f"2D numpy array must have {len(self.parameters)} columns to match all parameters, since theta_sampling is disabled."
+                        f"2D numpy array must have {len(self.parameters)} columns to match all parameters, since vector_mode is disabled."
                     )
                 # print("Converting 2D numpy array to list of ParameterSet instances.")
-                samples = [self.theta_to_instance(row) for row in input]
+                samples = [self.vector_to_instance(row) for row in input]
             else:
                 raise ValueError("Samples must be a 1D or 2D numpy array.")
         elif not isinstance(input, list):
@@ -859,8 +1067,10 @@ class ParameterBank:
             if isinstance(param, IndependentParameter) and param._is_sampled:
                 if not (param.range[0] <= sample[key] <= param.range[1]):
                     result = -np.inf
+                    break
                 if not all(sample.satisfies(c) for c in self.constraints):
                     result = -np.inf
+                    break
         return result
 
     def order(self, instance: ParameterSet) -> ParameterSet:
@@ -883,13 +1093,23 @@ class ParameterBank:
             raise ValueError("Error reordering parameters: " + str(e))
         return out
 
-    def pretty_print(self) -> None:
-        """Print a human-readable summary of the bank configuration."""
-        print("ParameterBank:")
-        print("----------------")
+    def summary(self) -> str:
+        """Return a human-readable summary of the bank configuration."""
+        lines: list[str] = []
+        lines.append("ParameterBank:")
+        lines.append("----------------")
         for name, param in self.parameters.items():
-            print(f"{name}: {param}")
-        print("Constraints:")
-        print("----------------")
+            if isinstance(param, IndependentParameter):
+                unit = getattr(param, "_unit", None)
+                unit_str = f" [{unit}]" if unit is not None else ""
+                status = "sampled" if param._is_sampled else "fixed"
+                lines.append(
+                    f"{name}{unit_str}: {status}, value={param.value}, range={param.range}"
+                )
+            else:
+                lines.append(f"{name}: {param}")
+        lines.append("Constraints:")
+        lines.append("----------------")
         for constraint in self.constraints:
-            print(constraint)
+            lines.append(str(constraint))
+        return "\n".join(lines)
