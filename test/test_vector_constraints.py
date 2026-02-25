@@ -12,17 +12,13 @@ from jscip import (
 
 def test_vector_element_constraint():
     """Test constraint that checks individual vector elements."""
-    vec = IndependentVectorParameter(
-        value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    vec = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0))
 
     # Constraint: all elements must be less than 5
     def all_elements_less_than_5(p):
         return np.all(p["vec"] < 5.0)
 
-    bank = ParameterBank(
-        parameters={"vec": vec}, constraints=[all_elements_less_than_5]
-    )
+    bank = ParameterBank(parameters={"vec": vec}, constraints=[all_elements_less_than_5])
 
     # Sample with constraint
     sample = bank.sample()
@@ -32,9 +28,7 @@ def test_vector_element_constraint():
 
 def test_vector_norm_constraint():
     """Test constraint based on vector norm."""
-    vec = IndependentVectorParameter(
-        value=[1.0, 1.0], is_sampled=True, range=(-10.0, 10.0)
-    )
+    vec = IndependentVectorParameter(value=[1.0, 1.0], is_sampled=True, range=(-10.0, 10.0))
 
     # Constraint: L2 norm must be less than 5
     def norm_less_than_5(p):
@@ -48,9 +42,7 @@ def test_vector_norm_constraint():
 
 def test_vector_sum_constraint():
     """Test constraint on sum of vector elements."""
-    vec = IndependentVectorParameter(
-        value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 5.0)
-    )
+    vec = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 5.0))
 
     # Constraint: sum of elements must be less than 10
     def sum_less_than_10(p):
@@ -65,9 +57,7 @@ def test_vector_sum_constraint():
 def test_cross_parameter_vector_constraint():
     """Test constraint involving multiple parameters including vectors."""
     scalar = IndependentScalarParameter(value=2.0, is_sampled=True, range=(1.0, 5.0))
-    vec = IndependentVectorParameter(
-        value=[1.0, 1.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    vec = IndependentVectorParameter(value=[1.0, 1.0], is_sampled=True, range=(0.0, 10.0))
 
     # Constraint: scalar * norm(vec) < 20
     def product_constraint(p):
@@ -83,12 +73,8 @@ def test_cross_parameter_vector_constraint():
 
 def test_vector_dot_product_constraint():
     """Test constraint based on dot product of two vectors."""
-    vec1 = IndependentVectorParameter(
-        value=[1.0, 0.0], is_sampled=True, range=(-5.0, 5.0)
-    )
-    vec2 = IndependentVectorParameter(
-        value=[0.0, 1.0], is_sampled=True, range=(-5.0, 5.0)
-    )
+    vec1 = IndependentVectorParameter(value=[1.0, 0.0], is_sampled=True, range=(-5.0, 5.0))
+    vec2 = IndependentVectorParameter(value=[0.0, 1.0], is_sampled=True, range=(-5.0, 5.0))
 
     # Constraint: dot product must be positive (vectors not orthogonal)
     def dot_product_positive(p):
@@ -104,12 +90,8 @@ def test_vector_dot_product_constraint():
 
 def test_vector_angle_constraint():
     """Test constraint based on angle between vectors."""
-    vec1 = IndependentVectorParameter(
-        value=[1.0, 0.0], is_sampled=True, range=(-10.0, 10.0)
-    )
-    vec2 = IndependentVectorParameter(
-        value=[1.0, 1.0], is_sampled=True, range=(-10.0, 10.0)
-    )
+    vec1 = IndependentVectorParameter(value=[1.0, 0.0], is_sampled=True, range=(-10.0, 10.0))
+    vec2 = IndependentVectorParameter(value=[1.0, 1.0], is_sampled=True, range=(-10.0, 10.0))
 
     # Constraint: angle between vectors must be less than 90 degrees
     def acute_angle(p):
@@ -122,9 +104,7 @@ def test_vector_angle_constraint():
         cos_angle = np.dot(v1, v2) / (norm1 * norm2)
         return cos_angle > 0  # cos(90°) = 0
 
-    bank = ParameterBank(
-        parameters={"vec1": vec1, "vec2": vec2}, constraints=[acute_angle]
-    )
+    bank = ParameterBank(parameters={"vec1": vec1, "vec2": vec2}, constraints=[acute_angle])
 
     sample = bank.sample()
     v1 = sample["vec1"]
@@ -135,9 +115,7 @@ def test_vector_angle_constraint():
 
 def test_vector_range_constraint():
     """Test constraint that limits vector to a specific range."""
-    vec = IndependentVectorParameter(
-        value=[5.0, 5.0, 5.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    vec = IndependentVectorParameter(value=[5.0, 5.0, 5.0], is_sampled=True, range=(0.0, 10.0))
 
     # Constraint: all elements between 3 and 7
     def elements_in_range(p):
@@ -151,9 +129,7 @@ def test_vector_range_constraint():
 
 def test_vector_monotonic_constraint():
     """Test constraint requiring vector elements to be monotonic."""
-    vec = IndependentVectorParameter(
-        value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    vec = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0))
 
     # Constraint: elements must be in increasing order
     def monotonic_increasing(p):
@@ -169,9 +145,7 @@ def test_vector_monotonic_constraint():
 
 def test_multiple_vector_constraints():
     """Test multiple constraints on the same vector."""
-    vec = IndependentVectorParameter(
-        value=[2.0, 3.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    vec = IndependentVectorParameter(value=[2.0, 3.0], is_sampled=True, range=(0.0, 10.0))
 
     # Multiple constraints
     def sum_constraint(p):
@@ -196,9 +170,7 @@ def test_multiple_vector_constraints():
 
 def test_vector_constraint_rejection_sampling():
     """Test that constraint rejection sampling works with vectors."""
-    vec = IndependentVectorParameter(
-        value=[1.0, 1.0], is_sampled=True, range=(0.0, 3.0)
-    )
+    vec = IndependentVectorParameter(value=[1.0, 1.0], is_sampled=True, range=(0.0, 3.0))
 
     # Constraint - norm must be less than 3.0 (achievable with range 0-3)
     def small_norm(p):
@@ -215,9 +187,7 @@ def test_vector_constraint_rejection_sampling():
 def test_vector_constraint_with_scalar():
     """Test mixed scalar and vector constraints."""
     scalar = IndependentScalarParameter(value=5.0, is_sampled=True, range=(0.0, 10.0))
-    vec = IndependentVectorParameter(
-        value=[1.0, 2.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    vec = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 10.0))
 
     # Constraint: scalar must be greater than max element of vector
     def scalar_greater_than_max(p):
@@ -234,17 +204,13 @@ def test_vector_constraint_with_scalar():
 
 def test_vector_constraint_impossible():
     """Test that impossible constraints raise an error."""
-    vec = IndependentVectorParameter(
-        value=[5.0, 5.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    vec = IndependentVectorParameter(value=[5.0, 5.0], is_sampled=True, range=(0.0, 10.0))
 
     # Impossible constraint - norm can't be negative
     def impossible(p):
         return np.linalg.norm(p["vec"]) < 0
 
-    bank = ParameterBank(
-        parameters={"vec": vec}, constraints=[impossible], max_attempts=10
-    )
+    bank = ParameterBank(parameters={"vec": vec}, constraints=[impossible], max_attempts=10)
 
     with pytest.raises(RuntimeError, match="Failed to sample"):
         bank.sample()

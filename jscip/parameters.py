@@ -119,9 +119,7 @@ class IndependentScalarParameter(IndependentParameter):
         self._range = range
 
         if is_sampled and (range is None or len(range) != 2):
-            raise ValueError(
-                "If is_sampled is True, range must be a tuple of two numeric values."
-            )
+            raise ValueError("If is_sampled is True, range must be a tuple of two numeric values.")
 
         if is_sampled and range is not None:
             self._distribution = stats.uniform(
@@ -164,9 +162,7 @@ class IndependentScalarParameter(IndependentParameter):
     def __str__(self) -> str:
         return self.__repr__()
 
-    def _validate_value_and_range(
-        self, value: float, range: tuple[float, float] | None
-    ) -> None:
+    def _validate_value_and_range(self, value: float, range: tuple[float, float] | None) -> None:
         """Validate value and range consistency.
 
         Args:
@@ -236,9 +232,7 @@ class DerivedScalarParameter(DerivedParameter):
 
     def __init__(self, function) -> None:
         super().__init__(function)
-        logger.debug(
-            "Initialized DerivedScalarParameter with function %s", self.function
-        )
+        logger.debug("Initialized DerivedScalarParameter with function %s", self.function)
 
     def __repr__(self) -> str:
         return f"DerivedScalarParameter(function={self.function.__name__})"
@@ -373,9 +367,7 @@ class DerivedVectorParameter(DerivedParameter):
         Returns:
             DerivedVectorParameter: A new wrapper around the same function.
         """
-        result = DerivedVectorParameter(
-            function=self.function, output_shape=self._output_shape
-        )
+        result = DerivedVectorParameter(function=self.function, output_shape=self._output_shape)
         logger.debug("Copied DerivedVectorParameter: %s", result)
         return result
 
@@ -403,9 +395,7 @@ class IndependentVectorParameter(IndependentParameter):
         self,
         value: list | np.ndarray,
         is_sampled: bool = False,
-        range: (
-            tuple[list | np.ndarray, list | np.ndarray] | tuple[float, float] | None
-        ) = None,
+        range: (tuple[list | np.ndarray, list | np.ndarray] | tuple[float, float] | None) = None,
         distribution: Literal["uniform", "mvnormal"] = "uniform",
         cov: np.ndarray | None = None,
     ):
@@ -552,9 +542,7 @@ class IndependentVectorParameter(IndependentParameter):
 
         # Validate that current value is within range
         if not np.all((self._value >= low_arr) & (self._value <= high_arr)):
-            raise ValueError(
-                f"Value {self._value} is not within range [{low_arr}, {high_arr}]"
-            )
+            raise ValueError(f"Value {self._value} is not within range [{low_arr}, {high_arr}]")
 
         return (low_arr, high_arr)
 
@@ -577,16 +565,13 @@ class IndependentVectorParameter(IndependentParameter):
 
         if new_value.shape != self._shape:
             raise ValueError(
-                f"New value shape {new_value.shape} does not match "
-                f"parameter shape {self._shape}"
+                f"New value shape {new_value.shape} does not match parameter shape {self._shape}"
             )
 
         if self._range is not None:
             low, high = self._range
             if not np.all((new_value >= low) & (new_value <= high)):
-                raise ValueError(
-                    f"Value {new_value} is not within range [{low}, {high}]"
-                )
+                raise ValueError(f"Value {new_value} is not within range [{low}, {high}]")
 
         self._value = new_value
         logger.debug("Set value of IndependentVectorParameter to %s", new_value)
@@ -634,9 +619,7 @@ class IndependentVectorParameter(IndependentParameter):
                 result = self.value.copy()
             else:
                 result = np.tile(self.value, (size, 1))
-            logger.debug(
-                "Returned fixed value from IndependentVectorParameter: %s", result
-            )
+            logger.debug("Returned fixed value from IndependentVectorParameter: %s", result)
             return result
 
         if self._distribution == "uniform":

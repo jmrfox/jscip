@@ -13,9 +13,7 @@ from jscip import (
 def test_sample_with_vector_parameters():
     """Test sampling a ParameterBank with vector parameters."""
     scalar = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
-    vector = IndependentVectorParameter(
-        value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0)
-    )
+    vector = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
 
     bank = ParameterBank(parameters={"scalar": scalar, "vector": vector})
 
@@ -29,9 +27,7 @@ def test_sample_with_vector_parameters():
 
 def test_sample_multiple_with_vectors():
     """Test sampling multiple instances with vector parameters."""
-    vector = IndependentVectorParameter(
-        value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    vector = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0))
 
     bank = ParameterBank(parameters={"vector": vector})
 
@@ -50,13 +46,9 @@ def test_sample_multiple_with_vectors():
 def test_instance_to_theta_with_vectors():
     """Test converting ParameterSet with vectors to theta array."""
     scalar = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
-    vector = IndependentVectorParameter(
-        value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0)
-    )
+    vector = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
 
-    bank = ParameterBank(
-        parameters={"scalar": scalar, "vector": vector}, theta_sampling=False
-    )
+    bank = ParameterBank(parameters={"scalar": scalar, "vector": vector}, theta_sampling=False)
 
     sample = bank.sample()
     theta = bank.instance_to_theta(sample)
@@ -70,13 +62,9 @@ def test_instance_to_theta_with_vectors():
 def test_theta_to_instance_with_vectors():
     """Test converting theta array back to ParameterSet with vectors."""
     scalar = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
-    vector = IndependentVectorParameter(
-        value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0)
-    )
+    vector = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
 
-    bank = ParameterBank(
-        parameters={"scalar": scalar, "vector": vector}, theta_sampling=True
-    )
+    bank = ParameterBank(parameters={"scalar": scalar, "vector": vector}, theta_sampling=True)
 
     # Create a theta array: [scalar_value, vector_elem1, vector_elem2]
     theta = np.array([1.5, 3.0, 4.0])
@@ -88,14 +76,10 @@ def test_theta_to_instance_with_vectors():
 
 def test_roundtrip_conversion_with_vectors():
     """Test roundtrip conversion: instance -> theta -> instance."""
-    vector = IndependentVectorParameter(
-        value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    vector = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0))
     scalar = IndependentScalarParameter(value=5.0, is_sampled=True, range=(0.0, 10.0))
 
-    bank = ParameterBank(
-        parameters={"vector": vector, "scalar": scalar}, theta_sampling=False
-    )
+    bank = ParameterBank(parameters={"vector": vector, "scalar": scalar}, theta_sampling=False)
 
     original = bank.sample()
     theta = bank.instance_to_theta(original)
@@ -110,9 +94,7 @@ def test_roundtrip_conversion_with_vectors():
 
 def test_instance_to_theta_list_with_vectors():
     """Test converting list of ParameterSets with vectors to 2D theta array."""
-    vector = IndependentVectorParameter(
-        value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0)
-    )
+    vector = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
 
     bank = ParameterBank(parameters={"vector": vector}, theta_sampling=False)
 
@@ -144,14 +126,10 @@ def test_get_default_values_with_vectors():
 
 def test_get_default_values_theta_with_vectors():
     """Test get_default_values returning theta with vector parameters."""
-    vector = IndependentVectorParameter(
-        value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0)
-    )
+    vector = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
     scalar = IndependentScalarParameter(value=3.0, is_sampled=True, range=(0.0, 10.0))
 
-    bank = ParameterBank(
-        parameters={"scalar": scalar, "vector": vector}, theta_sampling=True
-    )
+    bank = ParameterBank(parameters={"scalar": scalar, "vector": vector}, theta_sampling=True)
 
     theta = bank.get_default_values(return_theta=True)
 
@@ -163,9 +141,7 @@ def test_get_default_values_theta_with_vectors():
 
 def test_derived_parameter_with_vector_input():
     """Test derived parameter computed from vector parameter."""
-    position = IndependentVectorParameter(
-        value=[3.0, 4.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    position = IndependentVectorParameter(value=[3.0, 4.0], is_sampled=True, range=(0.0, 10.0))
 
     def compute_distance(ps):
         return np.linalg.norm(ps["position"])
@@ -203,14 +179,10 @@ def test_mixed_scalar_vector_sampling():
 def test_theta_dimensions_with_vectors():
     """Test that theta dimensions match expected size with vectors."""
     v1 = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
-    v2 = IndependentVectorParameter(
-        value=[3.0, 4.0, 5.0], is_sampled=True, range=(0.0, 10.0)
-    )
+    v2 = IndependentVectorParameter(value=[3.0, 4.0, 5.0], is_sampled=True, range=(0.0, 10.0))
     s1 = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
 
-    bank = ParameterBank(
-        parameters={"s1": s1, "v1": v1, "v2": v2}, theta_sampling=False
-    )
+    bank = ParameterBank(parameters={"s1": s1, "v1": v1, "v2": v2}, theta_sampling=False)
 
     # Expected theta dimensions: 1 (s1) + 2 (v1) + 3 (v2) = 6
     assert len(bank.lower_bounds) == 6

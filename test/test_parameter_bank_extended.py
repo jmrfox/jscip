@@ -54,9 +54,7 @@ def test_add_parameter_invalid_type():
 
 def test_add_constraint():
     bank = ParameterBank(
-        parameters={
-            "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0))
-        }
+        parameters={"a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0))}
     )
 
     def constraint(ps):
@@ -80,9 +78,7 @@ def test_get_constraints():
         return ps["a"] < 1
 
     bank = ParameterBank(
-        parameters={
-            "a": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0))
-        },
+        parameters={"a": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0))},
         constraints=[constraint1, constraint2],
     )
     constraints = bank.get_constraints()

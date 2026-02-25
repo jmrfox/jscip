@@ -48,9 +48,7 @@ class ParameterBank:
         parameters: (
             dict[
                 str,
-                IndependentScalarParameter
-                | IndependentVectorParameter
-                | DerivedScalarParameter,
+                IndependentScalarParameter | IndependentVectorParameter | DerivedScalarParameter,
             ]
             | None
         ) = None,
@@ -105,9 +103,7 @@ class ParameterBank:
         self.sampled_indices = [
             self.names.index(key)
             for key, param in self.parameters.items()
-            if isinstance(
-                param, (IndependentScalarParameter, IndependentVectorParameter)
-            )
+            if isinstance(param, (IndependentScalarParameter, IndependentVectorParameter))
             and param.is_sampled
         ]
         logger.debug("Refreshed sampled indices: %s", self.sampled_indices)
@@ -192,9 +188,7 @@ class ParameterBank:
 
     def __getitem__(
         self, key: str
-    ) -> (
-        IndependentScalarParameter | IndependentVectorParameter | DerivedScalarParameter
-    ):
+    ) -> IndependentScalarParameter | IndependentVectorParameter | DerivedScalarParameter:
         """Get a parameter by its name."""
         if key in self.parameters:
             return self.parameters[key]
@@ -271,9 +265,7 @@ class ParameterBank:
         """Get all constraints in the bank."""
         return self.constraints
 
-    def get_default_values(
-        self, return_theta: bool | None = None
-    ) -> ParameterSet | np.ndarray:
+    def get_default_values(self, return_theta: bool | None = None) -> ParameterSet | np.ndarray:
         """Return default values for all parameters.
 
         Computes a ``ParameterSet`` by taking the current ``value`` for all
@@ -294,18 +286,14 @@ class ParameterBank:
             ValueError: If ``return_theta`` is not a boolean.
         """
         if return_theta is None:
-            return_theta = (
-                self.theta_sampling
-            )  # default to self.theta_sampling if not specified
+            return_theta = self.theta_sampling  # default to self.theta_sampling if not specified
         if not isinstance(return_theta, bool):
             raise ValueError("return_theta must be a boolean value.")
         p = ParameterSet(
             {
                 key: param.value
                 for key, param in self.parameters.items()
-                if isinstance(
-                    param, (IndependentScalarParameter, IndependentVectorParameter)
-                )
+                if isinstance(param, (IndependentScalarParameter, IndependentVectorParameter))
             }
         )
         logger.debug(
@@ -323,9 +311,7 @@ class ParameterBank:
             }
         )
         p = self.order(p)
-        logger.debug(
-            "[get_default_values] Default values for all parameters in the bank: %s", p
-        )
+        logger.debug("[get_default_values] Default values for all parameters in the bank: %s", p)
         if return_theta:
             return self.instance_to_theta(p)
         else:
@@ -361,9 +347,7 @@ class ParameterBank:
                 else:
                     theta_values.append(value)
             theta = np.array(theta_values)
-            logger.debug(
-                "[instance_to_theta] Converted ParameterSet to numpy array: %s", theta
-            )
+            logger.debug("[instance_to_theta] Converted ParameterSet to numpy array: %s", theta)
         else:
             # return a 2D array of shape (n_instances, n_theta_dims)
             theta_list = []
@@ -419,9 +403,7 @@ class ParameterBank:
                 if ``theta`` is not a NumPy array.
         """
         if not isinstance(theta, np.ndarray):
-            raise ValueError(
-                "Input must be a numpy array, instead got: " + str(type(theta))
-            )
+            raise ValueError("Input must be a numpy array, instead got: " + str(type(theta)))
         # validate length depending on theta_sampling mode
         if self.theta_sampling:
             # Calculate expected theta length (accounting for vector parameters)
@@ -487,9 +469,7 @@ class ParameterBank:
             {
                 key: param.sample()
                 for key, param in self.parameters.items()
-                if isinstance(
-                    param, (IndependentScalarParameter, IndependentVectorParameter)
-                )
+                if isinstance(param, (IndependentScalarParameter, IndependentVectorParameter))
             }
         )
         logger.debug(
@@ -500,9 +480,7 @@ class ParameterBank:
         for key, param in self.parameters.items():
             if isinstance(param, (DerivedScalarParameter, DerivedVectorParameter)):
                 p[key] = param.compute(p)
-        logger.debug(
-            "[sample_once] Sampled values for all parameters in the bank: %s", p
-        )
+        logger.debug("[sample_once] Sampled values for all parameters in the bank: %s", p)
         # put result in canonical order according to self.canonical_order
         p = self.order(p)
         return p
@@ -520,9 +498,7 @@ class ParameterBank:
             f"Failed to sample a parameter set satisfying constraints after {self._max_attempts} attempts."
         )
 
-    def sample(
-        self, size: int | tuple | None = None
-    ) -> ParameterSet | pd.DataFrame | np.ndarray:
+    def sample(self, size: int | tuple | None = None) -> ParameterSet | pd.DataFrame | np.ndarray:
         """Sample parameter sets or theta arrays.
 
         Args:
@@ -537,11 +513,7 @@ class ParameterBank:
         Raises:
             ValueError: If ``size`` has an invalid type or dimensionality.
         """
-        if (
-            size is not None
-            and not isinstance(size, int)
-            and not isinstance(size, tuple)
-        ):
+        if size is not None and not isinstance(size, int) and not isinstance(size, tuple):
             raise ValueError("Size must be None, an integer, or a tuple.")
         if size is None:
             n_samples = 1
@@ -549,9 +521,7 @@ class ParameterBank:
             n_samples = size
         elif isinstance(size, tuple):
             if len(size) > 1 and not self.theta_sampling:
-                raise ValueError(
-                    "Multiple dimensions are only supported for theta_sampling."
-                )
+                raise ValueError("Multiple dimensions are only supported for theta_sampling.")
             if len(size) == 1:
                 n_samples = size[0]
             else:
@@ -584,14 +554,14 @@ class ParameterBank:
                 out = self.instance_to_theta(samples[0])
             elif isinstance(size, int):
                 theta_dim = len(self.lower_bounds)  # Accounts for vector parameters
-                out = np.array(
-                    [self.instance_to_theta(sample) for sample in samples]
-                ).reshape((size, theta_dim))
+                out = np.array([self.instance_to_theta(sample) for sample in samples]).reshape(
+                    (size, theta_dim)
+                )
             elif isinstance(size, tuple):
                 theta_dim = len(self.lower_bounds)  # Accounts for vector parameters
-                out = np.array(
-                    [self.instance_to_theta(sample) for sample in samples]
-                ).reshape(size + (theta_dim,))
+                out = np.array([self.instance_to_theta(sample) for sample in samples]).reshape(
+                    size + (theta_dim,)
+                )
         else:
             if size is None:
                 out = samples[0]
@@ -616,15 +586,11 @@ class ParameterBank:
                 objects.
         """
         if not isinstance(instances, list):
-            raise ValueError(
-                "Instances must be a list of ParameterSetInstance objects."
-            )
+            raise ValueError("Instances must be a list of ParameterSetInstance objects.")
         if not instances:
             raise ValueError("Instances list cannot be empty.")
         if not all(isinstance(instance, ParameterSet) for instance in instances):
-            raise ValueError(
-                "All items in instances must be ParameterSetInstance objects."
-            )
+            raise ValueError("All items in instances must be ParameterSetInstance objects.")
         df = pd.DataFrame([dict(instance) for instance in instances])
         # Don't convert to float if we have vector parameters (arrays)
         # Only convert scalar columns to float
@@ -637,9 +603,7 @@ class ParameterBank:
         df = df[self.names]  # reorder columns to canonical order
         return df
 
-    def log_prob(
-        self, input: ParameterSet | pd.DataFrame | np.ndarray
-    ) -> float | np.ndarray:
+    def log_prob(self, input: ParameterSet | pd.DataFrame | np.ndarray) -> float | np.ndarray:
         """Compute log-probability for parameter instances.
 
         Args:
@@ -690,9 +654,7 @@ class ParameterBank:
             else:
                 raise ValueError("Samples must be a 1D or 2D numpy array.")
         elif not isinstance(input, list):
-            raise ValueError(
-                "Samples must be a list of ParameterSet instances or a numpy array."
-            )
+            raise ValueError("Samples must be a list of ParameterSet instances or a numpy array.")
 
         results = np.zeros(len(samples))
         for i, sample in enumerate(samples):

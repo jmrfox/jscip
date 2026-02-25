@@ -115,9 +115,7 @@ def test_complete_workflow_with_merging():
     # Create second bank
     bank2 = ParameterBank(
         parameters={
-            "velocity": IndependentScalarParameter(
-                10.0, is_sampled=True, range=(5.0, 15.0)
-            ),
+            "velocity": IndependentScalarParameter(10.0, is_sampled=True, range=(5.0, 15.0)),
         }
     )
 
@@ -159,9 +157,7 @@ def test_complete_workflow_copy_and_modify():
     copy = original.copy()
 
     # Modify copy
-    copy.add_parameter(
-        "z", IndependentScalarParameter(3.0, is_sampled=True, range=(2.0, 4.0))
-    )
+    copy.add_parameter("z", IndependentScalarParameter(3.0, is_sampled=True, range=(2.0, 4.0)))
     copy.add_constraint(lambda ps: ps["z"] > 2.5)
 
     # Verify original unchanged

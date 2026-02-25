@@ -127,9 +127,7 @@ def test_derived_vector_parameter_in_sample():
 
 def test_derived_vector_parameter_with_vector_input():
     """Test derived vector parameter that depends on another vector parameter."""
-    vec = IndependentVectorParameter(
-        value=[1.0, 2.0, 3.0], is_sampled=False, range=(0.0, 10.0)
-    )
+    vec = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=False, range=(0.0, 10.0))
 
     def normalized(p):
         """Normalize the input vector."""
