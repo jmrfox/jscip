@@ -340,7 +340,7 @@ class ParameterBank:
             )
         if isinstance(input, ParameterSet):
             # Flatten vector parameters into the theta array
-            theta_values = []
+            theta_values: list[float] = []
             for key in self.sampled:
                 value = input[key]
                 if isinstance(value, np.ndarray):

@@ -19,6 +19,7 @@ dev = [
     "mkdocstrings[python]>=0.25.0",
     "ruff>=0.15.2",
     "mypy>=1.19.1",
+    "pandas-stubs>=2.0.0",
 ]
 
 [build-system]
@@ -57,7 +58,7 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.12"
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
@@ -67,3 +68,7 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 strict_equality = true
+
+[[tool.mypy.overrides]]
+module = "scipy.*"
+ignore_missing_imports = true

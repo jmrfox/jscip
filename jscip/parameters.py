@@ -9,6 +9,7 @@ This module defines the core parameter types used in jscip:
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -119,9 +120,12 @@ class IndependentScalarParameter(IndependentParameter):
         self._range = range
 
         if is_sampled and (range is None or len(range) != 2):
-            raise ValueError("If is_sampled is True, range must be a tuple of two numeric values.")
+            raise ValueError(
+                "If is_sampled is True, range must be a tuple of two numeric values."
+            )
 
         if is_sampled and range is not None:
+            assert self.range is not None  # Type guard for mypy
             self._distribution = stats.uniform(
                 loc=self.range[0], scale=self.range[1] - self.range[0]
             )
@@ -162,7 +166,9 @@ class IndependentScalarParameter(IndependentParameter):
     def __str__(self) -> str:
         return self.__repr__()
 
-    def _validate_value_and_range(self, value: float, range: tuple[float, float] | None) -> None:
+    def _validate_value_and_range(
+        self, value: float, range: tuple[float, float] | None
+    ) -> None:
         """Validate value and range consistency.
 
         Args:
@@ -188,7 +194,7 @@ class IndependentScalarParameter(IndependentParameter):
             range,
         )
 
-    def sample(self, size: int | None = None) -> float | np.ndarray:
+    def sample(self, size: int | None = None) -> float:
         """Sample from the parameter's distribution.
 
         If `is_sampled` is True, draws from a uniform distribution over
@@ -232,35 +238,31 @@ class DerivedScalarParameter(DerivedParameter):
 
     def __init__(self, function) -> None:
         super().__init__(function)
-        logger.debug("Initialized DerivedScalarParameter with function %s", self.function)
+        logger.debug(
+            "Initialized DerivedScalarParameter with function %s", self.function
+        )
 
     def __repr__(self) -> str:
         return f"DerivedScalarParameter(function={self.function.__name__})"
 
     def compute(self, parameters: ParameterSet) -> float:
-        """Compute the derived value for a given parameter set.
+        """Compute the derived scalar value for a given parameter set.
 
         Args:
-            parameters: The ``ParameterSet`` providing inputs to the function.
+            parameters: A ParameterSet containing the independent parameters.
 
         Returns:
             float: The computed scalar value.
-
-        Raises:
-            ValueError: If ``parameters`` is not a ``ParameterSet`` or the
-                stored function is not callable.
         """
         from .parameter_set import ParameterSet
 
         if not isinstance(parameters, ParameterSet):
             raise ValueError("Parameters must be an instance of ParameterSet.")
-        if not callable(self.function):
-            raise ValueError("Function must be callable.")
         result = self.function(parameters)
         logger.debug("Computed value of DerivedScalarParameter: %s", result)
-        return result
+        return float(result)
 
-    def copy(self):
+    def copy(self) -> DerivedScalarParameter:
         """Return a shallow copy preserving the underlying function.
 
         Returns:
@@ -284,7 +286,11 @@ class DerivedVectorParameter(DerivedParameter):
         is_sampled: Always False for derived parameters.
     """
 
-    def __init__(self, function, output_shape: tuple[int, ...]) -> None:
+    def __init__(
+        self,
+        function: Callable[[ParameterSet], np.ndarray],
+        output_shape: tuple[int, ...],
+    ) -> None:
         """Initialize a DerivedVectorParameter.
 
         Args:
@@ -367,7 +373,9 @@ class DerivedVectorParameter(DerivedParameter):
         Returns:
             DerivedVectorParameter: A new wrapper around the same function.
         """
-        result = DerivedVectorParameter(function=self.function, output_shape=self._output_shape)
+        result = DerivedVectorParameter(
+            function=self.function, output_shape=self._output_shape
+        )
         logger.debug("Copied DerivedVectorParameter: %s", result)
         return result
 
@@ -395,7 +403,9 @@ class IndependentVectorParameter(IndependentParameter):
         self,
         value: list | np.ndarray,
         is_sampled: bool = False,
-        range: (tuple[list | np.ndarray, list | np.ndarray] | tuple[float, float] | None) = None,
+        range: (
+            tuple[list | np.ndarray, list | np.ndarray] | tuple[float, float] | None
+        ) = None,
         distribution: Literal["uniform", "mvnormal"] = "uniform",
         cov: np.ndarray | None = None,
     ):
@@ -542,7 +552,9 @@ class IndependentVectorParameter(IndependentParameter):
 
         # Validate that current value is within range
         if not np.all((self._value >= low_arr) & (self._value <= high_arr)):
-            raise ValueError(f"Value {self._value} is not within range [{low_arr}, {high_arr}]")
+            raise ValueError(
+                f"Value {self._value} is not within range [{low_arr}, {high_arr}]"
+            )
 
         return (low_arr, high_arr)
 
@@ -571,7 +583,9 @@ class IndependentVectorParameter(IndependentParameter):
         if self._range is not None:
             low, high = self._range
             if not np.all((new_value >= low) & (new_value <= high)):
-                raise ValueError(f"Value {new_value} is not within range [{low}, {high}]")
+                raise ValueError(
+                    f"Value {new_value} is not within range [{low}, {high}]"
+                )
 
         self._value = new_value
         logger.debug("Set value of IndependentVectorParameter to %s", new_value)
@@ -619,7 +633,9 @@ class IndependentVectorParameter(IndependentParameter):
                 result = self.value.copy()
             else:
                 result = np.tile(self.value, (size, 1))
-            logger.debug("Returned fixed value from IndependentVectorParameter: %s", result)
+            logger.debug(
+                "Returned fixed value from IndependentVectorParameter: %s", result
+            )
             return result
 
         if self._distribution == "uniform":
