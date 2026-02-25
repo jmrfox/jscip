@@ -5,6 +5,7 @@ with multivariate distributions.
 """
 
 import numpy as np
+
 from jscip import IndependentVectorParameter
 
 print("=" * 70)
@@ -36,7 +37,7 @@ velocity = IndependentVectorParameter(
 )
 
 print(f"Initial velocity: {velocity.value}")
-print(f"Range (all components): [-10.0, 10.0]")
+print("Range (all components): [-10.0, 10.0]")
 
 # Sample single vector
 sample = velocity.sample()
@@ -61,7 +62,7 @@ position_3d = IndependentVectorParameter(
     distribution="uniform",
 )
 
-print(f"Element-wise ranges:")
+print("Element-wise ranges:")
 print(f"  x: [{position_3d.range[0][0]}, {position_3d.range[1][0]}]")
 print(f"  y: [{position_3d.range[0][1]}, {position_3d.range[1][1]}]")
 print(f"  z: [{position_3d.range[0][2]}, {position_3d.range[1][2]}]")
@@ -81,7 +82,7 @@ correlated_params = IndependentVectorParameter(
     distribution="mvnormal",
 )
 
-print(f"Distribution: Multivariate normal (independent components)")
+print("Distribution: Multivariate normal (independent components)")
 print(
     f"Mean (center of range): {(correlated_params.range[0] + correlated_params.range[1]) / 2.0}"
 )
@@ -114,7 +115,7 @@ correlated = IndependentVectorParameter(
 print(f"Covariance matrix:\n{cov}")
 
 samples = correlated.sample(size=1000)
-print(f"\n1000 samples:")
+print("\n1000 samples:")
 print(f"  Sample correlation: {np.corrcoef(samples.T)[0, 1]:.3f}")
 print(f"  Expected correlation: {cov[0, 1]:.3f}")
 
@@ -156,7 +157,7 @@ print(f"Copy value: {copy.value}")
 
 # Modify copy
 copy.value = [3.0, 4.0]
-print(f"\nAfter modifying copy:")
+print("\nAfter modifying copy:")
 print(f"  Original value: {original.value}")
 print(f"  Copy value: {copy.value}")
 
@@ -183,10 +184,10 @@ initial_velocity = IndependentVectorParameter(
 
 print("Projectile motion simulation:")
 print(f"  Initial position: {initial_position.value}")
-print(f"  Initial velocity range:")
-print(f"    vx: [0.0, 10.0] m/s")
-print(f"    vy: [0.0, 10.0] m/s")
-print(f"    vz: [-2.0, 2.0] m/s")
+print("  Initial velocity range:")
+print("    vx: [0.0, 10.0] m/s")
+print("    vy: [0.0, 10.0] m/s")
+print("    vz: [-2.0, 2.0] m/s")
 
 # Sample 5 different initial velocities
 velocities = initial_velocity.sample(size=5)

@@ -7,8 +7,6 @@ This example demonstrates:
 - Validating parameter sets
 """
 
-import numpy as np
-
 from jscip import DerivedScalarParameter, IndependentScalarParameter, ParameterBank
 
 # Define parameters for a simple physics problem
@@ -98,7 +96,12 @@ except RuntimeError as e:
 # Using satisfies method
 print("\n5. Manual constraint checking:")
 test_sample = bank.sample()
-custom_constraint = lambda ps: ps["potential_energy"] > ps["kinetic_energy"]
+
+
+def custom_constraint(ps):
+    return ps["potential_energy"] > ps["kinetic_energy"]
+
+
 satisfies = test_sample.satisfies(custom_constraint)
 print(f"   PE > KE? {satisfies}")
 print(

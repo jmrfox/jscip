@@ -99,13 +99,13 @@ print(f"   Range: {trajectory['range']:.2f} m")
 print("\n2. Statistical analysis of 1000 trajectories:")
 trajectories = bank.sample(size=1000)
 
-print(f"   Range statistics:")
+print("   Range statistics:")
 print(f"     Mean: {trajectories['range'].mean():.2f} m")
 print(f"     Std: {trajectories['range'].std():.2f} m")
 print(f"     Min: {trajectories['range'].min():.2f} m")
 print(f"     Max: {trajectories['range'].max():.2f} m")
 
-print(f"\n   Max height statistics:")
+print("\n   Max height statistics:")
 print(f"     Mean: {trajectories['max_height'].mean():.2f} m")
 print(f"     Std: {trajectories['max_height'].std():.2f} m")
 print(f"     Min: {trajectories['max_height'].min():.2f} m")
@@ -117,7 +117,7 @@ best_idx = trajectories["range"].idxmax()
 best_trajectory = trajectories.loc[best_idx]
 print(f"   Best angle: {best_trajectory['launch_angle']:.1f}°")
 print(f"   Best range: {best_trajectory['range']:.2f} m")
-print(f"   (Theoretical optimum is 45° for maximum range)")
+print("   (Theoretical optimum is 45° for maximum range)")
 
 # Demonstrate that derived parameters update correctly
 print("\n4. Derived parameters update with base parameters:")

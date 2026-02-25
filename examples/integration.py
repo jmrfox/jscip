@@ -51,7 +51,7 @@ print(f"   Shape: {theta_sample.shape}")
 
 # Convert back to full parameter set
 full_sample = bank.theta_to_instance(theta_sample)
-print(f"   Converted to ParameterSet:")
+print("   Converted to ParameterSet:")
 print(f"     x={full_sample['x']:.3f}, y={full_sample['y']:.3f}")
 print(f"     objective={full_sample['objective']:.3f}")
 
@@ -59,7 +59,7 @@ print(f"     objective={full_sample['objective']:.3f}")
 print("\n2. Batch sampling with theta mode:")
 theta_batch = bank.sample(size=5)
 print(f"   Batch shape: {theta_batch.shape}")
-print(f"   First 3 samples:")
+print("   First 3 samples:")
 print(theta_batch[:3])
 
 # 3. Integration with scipy.optimize
@@ -86,12 +86,12 @@ result = minimize(
     bounds=[(-5.0, 5.0), (-5.0, 5.0)],
 )
 
-print(f"\n   Optimization result:")
+print("\n   Optimization result:")
 print(f"     Success: {result.success}")
 print(f"     Optimal x: {result.x[0]:.3f}")
 print(f"     Optimal y: {result.x[1]:.3f}")
 print(f"     Minimum value: {result.fun:.6f}")
-print(f"     Expected: x=2.0, y=-1.0, f=0.0")
+print("     Expected: x=2.0, y=-1.0, f=0.0")
 
 # 4. Working with bounds
 print("\n4. Parameter bounds:")
@@ -109,7 +109,7 @@ print(f"   Sample shape: {samples.shape}")
 full_samples = [bank.theta_to_instance(theta) for theta in samples]
 objectives = np.array([ps["objective"] for ps in full_samples])
 
-print(f"\n   Objective function statistics:")
+print("\n   Objective function statistics:")
 print(f"     Mean: {objectives.mean():.3f}")
 print(f"     Std: {objectives.std():.3f}")
 print(f"     Min: {objectives.min():.3f}")
@@ -119,7 +119,7 @@ print(f"     Max: {objectives.max():.3f}")
 best_idx = objectives.argmin()
 best_theta = samples[best_idx]
 best_params = bank.theta_to_instance(best_theta)
-print(f"\n   Best sample from Monte Carlo:")
+print("\n   Best sample from Monte Carlo:")
 print(f"     x={best_params['x']:.3f}, y={best_params['y']:.3f}")
 print(f"     objective={best_params['objective']:.3f}")
 
@@ -127,6 +127,6 @@ print(f"     objective={best_params['objective']:.3f}")
 print("\n6. Multi-dimensional sampling:")
 grid_samples = bank.sample(size=(10, 10))
 print(f"   Grid shape: {grid_samples.shape}")
-print(f"   This creates a 10x10 grid with 2 parameters each")
+print("   This creates a 10x10 grid with 2 parameters each")
 
 print("\n" + "=" * 60)

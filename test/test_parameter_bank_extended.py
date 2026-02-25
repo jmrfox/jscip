@@ -6,7 +6,6 @@ from jscip import (
     DerivedScalarParameter,
     IndependentScalarParameter,
     ParameterBank,
-    ParameterSet,
 )
 
 
@@ -59,7 +58,10 @@ def test_add_constraint():
             "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0))
         }
     )
-    constraint = lambda ps: ps["a"] > 0.5
+
+    def constraint(ps):
+        return ps["a"] > 0.5
+
     bank.add_constraint(constraint)
     assert constraint in bank.constraints
 
@@ -71,8 +73,12 @@ def test_add_constraint_invalid():
 
 
 def test_get_constraints():
-    constraint1 = lambda ps: ps["a"] > 0
-    constraint2 = lambda ps: ps["a"] < 1
+    def constraint1(ps):
+        return ps["a"] > 0
+
+    def constraint2(ps):
+        return ps["a"] < 1
+
     bank = ParameterBank(
         parameters={
             "a": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0))

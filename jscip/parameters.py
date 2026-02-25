@@ -243,7 +243,7 @@ class DerivedScalarParameter(DerivedParameter):
     def __repr__(self) -> str:
         return f"DerivedScalarParameter(function={self.function.__name__})"
 
-    def compute(self, parameters: "ParameterSet") -> float:
+    def compute(self, parameters: ParameterSet) -> float:
         """Compute the derived value for a given parameter set.
 
         Args:
@@ -330,7 +330,7 @@ class DerivedVectorParameter(DerivedParameter):
             f"output_shape={self.output_shape})"
         )
 
-    def compute(self, parameters: "ParameterSet") -> np.ndarray:
+    def compute(self, parameters: ParameterSet) -> np.ndarray:
         """Compute the derived vector value for a given parameter set.
 
         Args:
@@ -367,7 +367,7 @@ class DerivedVectorParameter(DerivedParameter):
         logger.debug("Computed value of DerivedVectorParameter: %s", result)
         return result
 
-    def copy(self) -> "DerivedVectorParameter":
+    def copy(self) -> DerivedVectorParameter:
         """Return a shallow copy preserving the underlying function.
 
         Returns:

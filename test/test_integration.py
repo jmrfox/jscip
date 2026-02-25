@@ -5,7 +5,6 @@ end-to-end scenarios.
 """
 
 import numpy as np
-import pandas as pd
 import pytest
 
 from jscip import (

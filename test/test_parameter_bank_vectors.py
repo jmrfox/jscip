@@ -8,7 +8,6 @@ from jscip import (
     IndependentScalarParameter,
     IndependentVectorParameter,
     ParameterBank,
-    ParameterSet,
 )
 
 

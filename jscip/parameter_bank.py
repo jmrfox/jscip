@@ -140,7 +140,7 @@ class ParameterBank:
         For vector parameters, returns the lower bound array or scalar if uniform.
         """
         bounds = []
-        for key, param in self.parameters.items():
+        for _key, param in self.parameters.items():
             if isinstance(param, IndependentScalarParameter) and param.is_sampled:
                 bounds.append(param.range[0])
             elif isinstance(param, IndependentVectorParameter) and param.is_sampled:
@@ -159,7 +159,7 @@ class ParameterBank:
         For vector parameters, returns the upper bound array or scalar if uniform.
         """
         bounds = []
-        for key, param in self.parameters.items():
+        for _key, param in self.parameters.items():
             if isinstance(param, IndependentScalarParameter) and param.is_sampled:
                 bounds.append(param.range[1])
             elif isinstance(param, IndependentVectorParameter) and param.is_sampled:
@@ -596,9 +596,9 @@ class ParameterBank:
             if size is None:
                 out = samples[0]
             elif isinstance(size, int):
-                out = self.instances_to_dataframe([sample for sample in samples])
+                out = self.instances_to_dataframe(list(samples))
             elif isinstance(size, tuple):
-                out = self.instances_to_dataframe([sample for sample in samples])
+                out = self.instances_to_dataframe(list(samples))
         return out
 
     def instances_to_dataframe(self, instances: list[ParameterSet]) -> pd.DataFrame:
@@ -736,7 +736,7 @@ class ParameterBank:
         try:
             out = instance.reindex(self.names)
         except Exception as e:
-            raise ValueError("Error reordering parameters: " + str(e))
+            raise ValueError("Error reordering parameters: " + str(e)) from e
         return out
 
     def pretty_print(self) -> None:
