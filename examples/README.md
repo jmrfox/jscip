@@ -54,7 +54,7 @@ python examples/basic_usage.py
 ### 4. `integration.py`
 **Demonstrates**: Integration with scientific libraries
 
-- Using `theta_sampling` mode for optimization
+- Using `array_mode` mode for optimization
 - Converting between representations (ParameterSet ↔ array ↔ DataFrame)
 - Integration with `scipy.optimize`
 - Working with NumPy arrays

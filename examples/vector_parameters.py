@@ -83,9 +83,7 @@ correlated_params = IndependentVectorParameter(
 )
 
 print("Distribution: Multivariate normal (independent components)")
-print(
-    f"Mean (center of range): {(correlated_params.range[0] + correlated_params.range[1]) / 2.0}"
-)
+print(f"Mean (center of range): {(correlated_params.range[0] + correlated_params.range[1]) / 2.0}")
 
 samples = correlated_params.sample(size=100)
 print(f"\n100 samples shape: {samples.shape}")

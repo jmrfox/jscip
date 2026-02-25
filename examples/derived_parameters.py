@@ -12,12 +12,8 @@ import numpy as np
 from jscip import DerivedScalarParameter, IndependentScalarParameter, ParameterBank
 
 # Define base parameters for a projectile motion problem
-initial_velocity = IndependentScalarParameter(
-    value=20.0, is_sampled=True, range=(10.0, 30.0)
-)
-launch_angle = IndependentScalarParameter(
-    value=45.0, is_sampled=True, range=(30.0, 60.0)
-)
+initial_velocity = IndependentScalarParameter(value=20.0, is_sampled=True, range=(10.0, 30.0))
+launch_angle = IndependentScalarParameter(value=45.0, is_sampled=True, range=(30.0, 60.0))
 gravity = IndependentScalarParameter(value=9.81, is_sampled=False)
 
 

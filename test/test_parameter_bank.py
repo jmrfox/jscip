@@ -17,7 +17,7 @@ def make_bank():
     bank = ParameterBank(
         parameters={"p1": p1, "p2": p2, "d1": d1},
         constraints=[lambda ps: ps["p1"] >= 0.2],
-        theta_sampling=False,
+        array_mode=False,
     )
     return bank
 

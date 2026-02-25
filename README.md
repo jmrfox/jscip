@@ -133,16 +133,16 @@ bank.add_constraint(lambda ps: ps["p3"] > 0)
 # Sample with different modes
 single = bank.sample()                    # Single ParameterSet
 batch = bank.sample(size=50)              # DataFrame with 50 samples
-array = bank.sample(size=(10, 5))         # 3D array (requires theta_sampling=True)
+array = bank.sample(size=(10, 5))         # 3D array (requires array_mode=True)
 ```
 
 ### Conversions
 
 ```python
 # Convert between representations
-theta_array = bank.instance_to_theta(sample)      # ParameterSet → array
-sample_back = bank.theta_to_instance(theta_array) # array → ParameterSet
-theta_from_df = bank.dataframe_to_theta(df)       # DataFrame → array
+theta_array = bank.instance_to_array(sample)      # ParameterSet → array
+sample_back = bank.array_to_instance(theta_array) # array → ParameterSet
+theta_from_df = bank.dataframe_to_array(df)       # DataFrame → array
 
 # Get default values
 defaults = bank.get_default_values()
@@ -167,7 +167,7 @@ For integration with optimization or MCMC libraries that expect flat arrays:
 ```python
 bank = ParameterBank(
     parameters={"a": param_a, "b": param_b},
-    theta_sampling=True,  # Only sample/return sampled parameters
+    array_mode=True,  # Only sample/return sampled parameters
 )
 
 theta = bank.sample()  # Returns 1D array instead of ParameterSet

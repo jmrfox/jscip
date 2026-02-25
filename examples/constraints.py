@@ -11,12 +11,8 @@ from jscip import DerivedScalarParameter, IndependentScalarParameter, ParameterB
 
 # Define parameters for a simple physics problem
 # We want to ensure total energy stays within bounds
-potential_energy = IndependentScalarParameter(
-    value=50.0, is_sampled=True, range=(0.0, 100.0)
-)
-kinetic_energy = IndependentScalarParameter(
-    value=30.0, is_sampled=True, range=(0.0, 100.0)
-)
+potential_energy = IndependentScalarParameter(value=50.0, is_sampled=True, range=(0.0, 100.0))
+kinetic_energy = IndependentScalarParameter(value=30.0, is_sampled=True, range=(0.0, 100.0))
 
 
 def compute_total_energy(params):
@@ -104,8 +100,6 @@ def custom_constraint(ps):
 
 satisfies = test_sample.satisfies(custom_constraint)
 print(f"   PE > KE? {satisfies}")
-print(
-    f"   PE={test_sample['potential_energy']:.1f}, KE={test_sample['kinetic_energy']:.1f}"
-)
+print(f"   PE={test_sample['potential_energy']:.1f}, KE={test_sample['kinetic_energy']:.1f}")
 
 print("\n" + "=" * 60)

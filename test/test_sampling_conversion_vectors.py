@@ -31,7 +31,7 @@ def test_sample_multiple_with_vectors():
 
     bank = ParameterBank(parameters={"vector": vector})
 
-    # When theta_sampling=False and size is int, returns DataFrame
+    # When array_mode=False and size is int, returns DataFrame
     samples_df = bank.sample(size=10)
 
     assert len(samples_df) == 10
@@ -43,15 +43,15 @@ def test_sample_multiple_with_vectors():
         assert len(vec) == 3
 
 
-def test_instance_to_theta_with_vectors():
+def test_instance_to_array_with_vectors():
     """Test converting ParameterSet with vectors to theta array."""
     scalar = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
     vector = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
 
-    bank = ParameterBank(parameters={"scalar": scalar, "vector": vector}, theta_sampling=False)
+    bank = ParameterBank(parameters={"scalar": scalar, "vector": vector}, array_mode=False)
 
     sample = bank.sample()
-    theta = bank.instance_to_theta(sample)
+    theta = bank.instance_to_array(sample)
 
     # Should have 3 elements: 1 scalar + 2 vector elements
     assert len(theta) == 3
@@ -59,16 +59,16 @@ def test_instance_to_theta_with_vectors():
     assert np.allclose(theta[1:3], sample["vector"])
 
 
-def test_theta_to_instance_with_vectors():
+def test_array_to_instance_with_vectors():
     """Test converting theta array back to ParameterSet with vectors."""
     scalar = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
     vector = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
 
-    bank = ParameterBank(parameters={"scalar": scalar, "vector": vector}, theta_sampling=True)
+    bank = ParameterBank(parameters={"scalar": scalar, "vector": vector}, array_mode=True)
 
     # Create a theta array: [scalar_value, vector_elem1, vector_elem2]
     theta = np.array([1.5, 3.0, 4.0])
-    instance = bank.theta_to_instance(theta)
+    instance = bank.array_to_instance(theta)
 
     assert instance["scalar"] == 1.5
     assert np.allclose(instance["vector"], [3.0, 4.0])
@@ -79,33 +79,33 @@ def test_roundtrip_conversion_with_vectors():
     vector = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0))
     scalar = IndependentScalarParameter(value=5.0, is_sampled=True, range=(0.0, 10.0))
 
-    bank = ParameterBank(parameters={"vector": vector, "scalar": scalar}, theta_sampling=False)
+    bank = ParameterBank(parameters={"vector": vector, "scalar": scalar}, array_mode=False)
 
     original = bank.sample()
-    theta = bank.instance_to_theta(original)
+    theta = bank.instance_to_array(original)
 
-    # Now switch to theta_sampling mode for conversion back
-    bank.theta_sampling = True
-    recovered = bank.theta_to_instance(theta)
+    # Now switch to array_mode mode for conversion back
+    bank.array_mode = True
+    recovered = bank.array_to_instance(theta)
 
     assert recovered["scalar"] == original["scalar"]
     assert np.allclose(recovered["vector"], original["vector"])
 
 
-def test_instance_to_theta_list_with_vectors():
+def test_instance_to_array_list_with_vectors():
     """Test converting list of ParameterSets with vectors to 2D theta array."""
     vector = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
 
-    bank = ParameterBank(parameters={"vector": vector}, theta_sampling=False)
+    bank = ParameterBank(parameters={"vector": vector}, array_mode=False)
 
-    # Sample returns DataFrame when theta_sampling=False and size is int
+    # Sample returns DataFrame when array_mode=False and size is int
     # We need to convert to list of ParameterSets manually for this test
     samples_list = []
     for _ in range(5):
         sample = bank.sample()  # Single sample returns ParameterSet
         samples_list.append(sample)
 
-    theta = bank.instance_to_theta(samples_list)
+    theta = bank.instance_to_array(samples_list)
 
     # Should be 2D: (5 samples, 2 vector elements)
     assert theta.shape == (5, 2)
@@ -118,7 +118,7 @@ def test_get_default_values_with_vectors():
 
     bank = ParameterBank(parameters={"vector": vector, "scalar": scalar})
 
-    defaults = bank.get_default_values(return_theta=False)
+    defaults = bank.get_default_values(return_array=False)
 
     assert defaults["scalar"] == 5.0
     assert np.allclose(defaults["vector"], [1.0, 2.0, 3.0])
@@ -129,9 +129,9 @@ def test_get_default_values_theta_with_vectors():
     vector = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
     scalar = IndependentScalarParameter(value=3.0, is_sampled=True, range=(0.0, 10.0))
 
-    bank = ParameterBank(parameters={"scalar": scalar, "vector": vector}, theta_sampling=True)
+    bank = ParameterBank(parameters={"scalar": scalar, "vector": vector}, array_mode=True)
 
-    theta = bank.get_default_values(return_theta=True)
+    theta = bank.get_default_values(return_array=True)
 
     # Should have 3 elements: 1 scalar + 2 vector
     assert len(theta) == 3
@@ -182,14 +182,14 @@ def test_theta_dimensions_with_vectors():
     v2 = IndependentVectorParameter(value=[3.0, 4.0, 5.0], is_sampled=True, range=(0.0, 10.0))
     s1 = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
 
-    bank = ParameterBank(parameters={"s1": s1, "v1": v1, "v2": v2}, theta_sampling=False)
+    bank = ParameterBank(parameters={"s1": s1, "v1": v1, "v2": v2}, array_mode=False)
 
     # Expected theta dimensions: 1 (s1) + 2 (v1) + 3 (v2) = 6
     assert len(bank.lower_bounds) == 6
     assert len(bank.upper_bounds) == 6
 
     sample = bank.sample()
-    theta = bank.instance_to_theta(sample)
+    theta = bank.instance_to_array(sample)
     assert len(theta) == 6
 
 
@@ -201,9 +201,9 @@ def test_elementwise_vector_range_conversion():
         range=(np.array([0.0, 1.0, 2.0]), np.array([5.0, 6.0, 7.0])),
     )
 
-    bank = ParameterBank(parameters={"vector": vector}, theta_sampling=True)
+    bank = ParameterBank(parameters={"vector": vector}, array_mode=True)
 
     theta = np.array([2.5, 3.5, 4.5])
-    instance = bank.theta_to_instance(theta)
+    instance = bank.array_to_instance(theta)
 
     assert np.allclose(instance["vector"], [2.5, 3.5, 4.5])

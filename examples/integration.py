@@ -1,7 +1,7 @@
 """Integration with scientific libraries example for jscip.
 
 This example demonstrates:
-- Using theta_sampling mode for optimization
+- Using array_mode mode for optimization
 - Converting between representations
 - Integration with scipy.optimize
 - Working with NumPy arrays
@@ -27,21 +27,21 @@ def compute_objective(params):
 
 objective = DerivedScalarParameter(compute_objective)
 
-# Create bank with theta_sampling for optimization
+# Create bank with array_mode for optimization
 bank = ParameterBank(
     parameters={
         "x": x_param,
         "y": y_param,
         "objective": objective,
     },
-    theta_sampling=True,  # Work with flat arrays
+    array_mode=True,  # Work with flat arrays
 )
 
 print("=" * 60)
 print("Integration with Scientific Libraries")
 print("=" * 60)
 
-# 1. Demonstrate theta_sampling mode
+# 1. Demonstrate array_mode mode
 print("\n1. Theta sampling mode:")
 print("   Sampling returns flat arrays instead of ParameterSet objects")
 
@@ -50,7 +50,7 @@ print(f"   Sample (theta): {theta_sample}")
 print(f"   Shape: {theta_sample.shape}")
 
 # Convert back to full parameter set
-full_sample = bank.theta_to_instance(theta_sample)
+full_sample = bank.array_to_instance(theta_sample)
 print("   Converted to ParameterSet:")
 print(f"     x={full_sample['x']:.3f}, y={full_sample['y']:.3f}")
 print(f"     objective={full_sample['objective']:.3f}")
@@ -68,7 +68,7 @@ print("\n3. Optimization with scipy:")
 
 def objective_function(theta):
     """Wrapper for scipy.optimize"""
-    params = bank.theta_to_instance(theta)
+    params = bank.array_to_instance(theta)
     return params["objective"]
 
 
@@ -106,7 +106,7 @@ print(f"   Generated {n_samples} samples")
 print(f"   Sample shape: {samples.shape}")
 
 # Convert to full parameter sets and compute statistics
-full_samples = [bank.theta_to_instance(theta) for theta in samples]
+full_samples = [bank.array_to_instance(theta) for theta in samples]
 objectives = np.array([ps["objective"] for ps in full_samples])
 
 print("\n   Objective function statistics:")
@@ -118,7 +118,7 @@ print(f"     Max: {objectives.max():.3f}")
 # Find best sample
 best_idx = objectives.argmin()
 best_theta = samples[best_idx]
-best_params = bank.theta_to_instance(best_theta)
+best_params = bank.array_to_instance(best_theta)
 print("\n   Best sample from Monte Carlo:")
 print(f"     x={best_params['x']:.3f}, y={best_params['y']:.3f}")
 print(f"     objective={best_params['objective']:.3f}")

@@ -35,8 +35,9 @@ class ParameterBank:
         parameters: Dictionary mapping parameter names to parameter instances.
         constraints: List of constraint functions that take a ParameterSet and
             return a boolean.
-        theta_sampling: If True, sampling and conversions use only sampled
-            parameters; otherwise use all parameters.
+        array_mode: If True, sampling and conversions use only sampled
+            parameters and return plain arrays; otherwise use all parameters
+            and return ParameterSet objects.
         texnames: Optional dictionary mapping parameter names to TeX-formatted
             display names.
         max_attempts: Maximum number of attempts when sampling with constraints
@@ -53,13 +54,13 @@ class ParameterBank:
             | None
         ) = None,
         constraints: list[Callable[[ParameterSet], bool]] | None = None,
-        theta_sampling: bool = False,
+        array_mode: bool = False,
         texnames: dict[str, str] | None = None,
         max_attempts: int = 100,
     ) -> None:
         self.parameters = parameters if parameters is not None else {}
         self.constraints = constraints if constraints is not None else []
-        self.theta_sampling = theta_sampling
+        self.array_mode = array_mode
         if not isinstance(max_attempts, int) or max_attempts < 1:
             raise ValueError("max_attempts must be a positive integer.")
         self._max_attempts = max_attempts
@@ -200,7 +201,7 @@ class ParameterBank:
         result = ParameterBank(
             parameters={k: v.copy() for k, v in self.parameters.items()},
             constraints=self.constraints.copy(),
-            theta_sampling=self.theta_sampling,
+            array_mode=self.array_mode,
             texnames=self.texnames.copy(),
             max_attempts=self._max_attempts,
         )
@@ -265,30 +266,30 @@ class ParameterBank:
         """Get all constraints in the bank."""
         return self.constraints
 
-    def get_default_values(self, return_theta: bool | None = None) -> ParameterSet | np.ndarray:
+    def get_default_values(self, return_array: bool | None = None) -> ParameterSet | np.ndarray:
         """Return default values for all parameters.
 
         Computes a ``ParameterSet`` by taking the current ``value`` for all
         independent parameters and computing all derived parameters from those
         values. Optionally, returns the sampled subset as a NumPy array when
-        ``return_theta=True``.
+        ``return_array=True``.
 
         Args:
-            return_theta: If True, return a 1D NumPy array of sampled parameter
+            return_array: If True, return a 1D NumPy array of sampled parameter
                 values in canonical sampled order. If False, return a full
-                ``ParameterSet``. Defaults to ``self.theta_sampling``.
+                ``ParameterSet``. Defaults to ``self.array_mode``.
 
         Returns:
             ParameterSet | numpy.ndarray: The default instance or the sampled
             values array.
 
         Raises:
-            ValueError: If ``return_theta`` is not a boolean.
+            ValueError: If ``return_array`` is not a boolean.
         """
-        if return_theta is None:
-            return_theta = self.theta_sampling  # default to self.theta_sampling if not specified
-        if not isinstance(return_theta, bool):
-            raise ValueError("return_theta must be a boolean value.")
+        if return_array is None:
+            return_array = self.array_mode
+        if not isinstance(return_array, bool):
+            raise ValueError("return_array must be a boolean value.")
         p = ParameterSet(
             {
                 key: param.value
@@ -312,13 +313,13 @@ class ParameterBank:
         )
         p = self.order(p)
         logger.debug("[get_default_values] Default values for all parameters in the bank: %s", p)
-        if return_theta:
-            return self.instance_to_theta(p)
+        if return_array:
+            return self.instance_to_array(p)
         else:
             return p
 
-    def instance_to_theta(self, input: ParameterSet | list[ParameterSet]) -> np.ndarray:
-        """Convert a parameter instance (or list) to a sampled theta array.
+    def instance_to_array(self, input: ParameterSet | list[ParameterSet]) -> np.ndarray:
+        """Convert a parameter instance (or list) to a sampled parameter array.
 
         Args:
             input: A single ``ParameterSet`` or list of ``ParameterSet``
@@ -347,7 +348,7 @@ class ParameterBank:
                 else:
                     theta_values.append(value)
             theta = np.array(theta_values)
-            logger.debug("[instance_to_theta] Converted ParameterSet to numpy array: %s", theta)
+            logger.debug("[instance_to_array] Converted ParameterSet to numpy array: %s", theta)
         else:
             # return a 2D array of shape (n_instances, n_theta_dims)
             theta_list = []
@@ -362,12 +363,12 @@ class ParameterBank:
                 theta_list.append(theta_values)
             theta = np.array(theta_list)
             logger.debug(
-                "[instance_to_theta] Converted list of ParameterSetInstances to numpy array: %s",
+                "[instance_to_array] Converted list of ParameterSetInstances to numpy array: %s",
                 theta,
             )
         return theta
 
-    def dataframe_to_theta(self, df: pd.DataFrame) -> np.ndarray:
+    def dataframe_to_array(self, df: pd.DataFrame) -> np.ndarray:
         """Extract sampled parameter columns from a DataFrame as a NumPy array.
 
         Args:
@@ -385,10 +386,10 @@ class ParameterBank:
         theta = df[self.sampled].to_numpy()
         return theta
 
-    def theta_to_instance(self, theta: np.ndarray) -> ParameterSet:
-        """Convert a theta array to a parameter instance.
+    def array_to_instance(self, theta: np.ndarray) -> ParameterSet:
+        """Convert a parameter array to a parameter instance.
 
-        When ``theta_sampling`` is True, ``theta`` must contain only sampled
+        When ``array_mode`` is True, ``theta`` must contain only sampled
         independent parameters in canonical sampled order. Otherwise, it must
         contain values for all independent parameters in canonical order.
 
@@ -399,13 +400,13 @@ class ParameterBank:
             ParameterSet: A full instance with derived parameters recomputed.
 
         Raises:
-            ValueError: If shapes are inconsistent with ``theta_sampling`` or
+            ValueError: If shapes are inconsistent with ``array_mode`` or
                 if ``theta`` is not a NumPy array.
         """
         if not isinstance(theta, np.ndarray):
             raise ValueError("Input must be a numpy array, instead got: " + str(type(theta)))
-        # validate length depending on theta_sampling mode
-        if self.theta_sampling:
+        # validate length depending on array_mode
+        if self.array_mode:
             # Calculate expected theta length (accounting for vector parameters)
             expected_len = len(self.lower_bounds)  # This already accounts for vectors
             if len(theta) != expected_len:
@@ -419,8 +420,8 @@ class ParameterBank:
                 )
         # theta in this case must be a 1D array
         # Start with defaults
-        out = self.get_default_values(return_theta=False)
-        if self.theta_sampling:
+        out = self.get_default_values(return_array=False)
+        if self.array_mode:
             # theta provides only sampled independent parameters
             # Need to unflatten vector parameters
             theta_idx = 0
@@ -504,11 +505,11 @@ class ParameterBank:
         Args:
             size: If ``None``, returns a single instance. If ``int``, returns a
                 batch. If ``tuple``, returns product size; multi-d shapes are
-                only supported when ``theta_sampling`` is True.
+                only supported when ``array_mode`` is True.
 
         Returns:
             ParameterSet | pandas.DataFrame | numpy.ndarray: Depending on
-            ``theta_sampling`` and ``size``.
+            ``array_mode`` and ``size``.
 
         Raises:
             ValueError: If ``size`` has an invalid type or dimensionality.
@@ -520,8 +521,8 @@ class ParameterBank:
         elif isinstance(size, int):
             n_samples = size
         elif isinstance(size, tuple):
-            if len(size) > 1 and not self.theta_sampling:
-                raise ValueError("Multiple dimensions are only supported for theta_sampling.")
+            if len(size) > 1 and not self.array_mode:
+                raise ValueError("Multiple dimensions are only supported for array_mode.")
             if len(size) == 1:
                 n_samples = size[0]
             else:
@@ -549,18 +550,18 @@ class ParameterBank:
                 }
             )
             samples.append(sample)
-        if self.theta_sampling:
+        if self.array_mode:
             if size is None:
-                out = self.instance_to_theta(samples[0])
+                out = self.instance_to_array(samples[0])
             elif isinstance(size, int):
-                theta_dim = len(self.lower_bounds)  # Accounts for vector parameters
-                out = np.array([self.instance_to_theta(sample) for sample in samples]).reshape(
-                    (size, theta_dim)
+                array_dim = len(self.lower_bounds)  # Accounts for vector parameters
+                out = np.array([self.instance_to_array(sample) for sample in samples]).reshape(
+                    (size, array_dim)
                 )
             elif isinstance(size, tuple):
-                theta_dim = len(self.lower_bounds)  # Accounts for vector parameters
-                out = np.array([self.instance_to_theta(sample) for sample in samples]).reshape(
-                    size + (theta_dim,)
+                array_dim = len(self.lower_bounds)  # Accounts for vector parameters
+                out = np.array([self.instance_to_array(sample) for sample in samples]).reshape(
+                    size + (array_dim,)
                 )
         else:
             if size is None:
@@ -617,7 +618,7 @@ class ParameterBank:
 
         Raises:
             ValueError: If the type/shape of ``input`` is inconsistent with the
-                current ``theta_sampling`` mode.
+                current ``array_mode`` mode.
         """
         # categorize inputs
         if isinstance(input, ParameterSet):  # if a single sample, package it in a list
@@ -629,28 +630,28 @@ class ParameterBank:
         elif isinstance(input, np.ndarray):  # if numpy array ...
             if input.ndim == 1:  # if 1D, treat as a single sample
                 if (
-                    input.shape[0] != len(self.sampled) and self.theta_sampling
-                ):  # if theta_sampling is enabled, sample must match sampled parameters
+                    input.shape[0] != len(self.sampled) and self.array_mode
+                ):  # if array_mode is enabled, sample must match sampled parameters
                     raise ValueError(
-                        f"1D numpy array must have length {len(self.sampled)} to match sampled parameters, since theta_sampling is enabled."
+                        f"1D numpy array must have length {len(self.sampled)} to match sampled parameters, since array_mode is enabled."
                     )
                 elif (
-                    input.shape[0] != len(self.parameters) and not self.theta_sampling
-                ):  # if theta_sampling is disabled, sample must match all parameters
+                    input.shape[0] != len(self.parameters) and not self.array_mode
+                ):  # if array_mode is disabled, sample must match all parameters
                     raise ValueError(
-                        f"1D numpy array must have length {len(self.parameters)} to match all parameters, since theta_sampling is disabled."
+                        f"1D numpy array must have length {len(self.parameters)} to match all parameters, since array_mode is disabled."
                     )
-                samples = [self.theta_to_instance(input)]
+                samples = [self.array_to_instance(input)]
             elif input.ndim == 2:  # if 2D, treat each row as a sample
-                if input.shape[1] != len(self.sampled) and self.theta_sampling:
+                if input.shape[1] != len(self.sampled) and self.array_mode:
                     raise ValueError(
-                        f"2D numpy array must have {len(self.sampled)} columns to match sampled parameters, since theta_sampling is enabled."
+                        f"2D numpy array must have {len(self.sampled)} columns to match sampled parameters, since array_mode is enabled."
                     )
-                elif input.shape[1] != len(self.parameters) and not self.theta_sampling:
+                elif input.shape[1] != len(self.parameters) and not self.array_mode:
                     raise ValueError(
-                        f"2D numpy array must have {len(self.parameters)} columns to match all parameters, since theta_sampling is disabled."
+                        f"2D numpy array must have {len(self.parameters)} columns to match all parameters, since array_mode is disabled."
                     )
-                samples = [self.theta_to_instance(row) for row in input]
+                samples = [self.array_to_instance(row) for row in input]
             else:
                 raise ValueError("Samples must be a 1D or 2D numpy array.")
         elif not isinstance(input, list):

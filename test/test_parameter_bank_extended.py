@@ -87,46 +87,46 @@ def test_get_constraints():
     assert constraint2 in constraints
 
 
-def test_theta_to_instance_with_theta_sampling():
+def test_array_to_instance_with_array_mode():
     bank = ParameterBank(
         parameters={
             "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
             "b": IndependentScalarParameter(3.0, is_sampled=False),
         },
-        theta_sampling=True,
+        array_mode=True,
     )
     theta = np.array([1.5])
-    instance = bank.theta_to_instance(theta)
+    instance = bank.array_to_instance(theta)
     assert instance["a"] == pytest.approx(1.5)
     assert instance["b"] == pytest.approx(3.0)
 
 
-def test_theta_to_instance_without_theta_sampling():
+def test_array_to_instance_without_array_mode():
     bank = ParameterBank(
         parameters={
             "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
             "b": IndependentScalarParameter(3.0, is_sampled=False),
         },
-        theta_sampling=False,
+        array_mode=False,
     )
     theta = np.array([1.5, 4.0])
-    instance = bank.theta_to_instance(theta)
+    instance = bank.array_to_instance(theta)
     assert instance["a"] == pytest.approx(1.5)
     assert instance["b"] == pytest.approx(4.0)
 
 
-def test_theta_to_instance_invalid_length():
+def test_array_to_instance_invalid_length():
     bank = ParameterBank(
         parameters={
             "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
         },
-        theta_sampling=True,
+        array_mode=True,
     )
     with pytest.raises(ValueError, match="does not match"):
-        bank.theta_to_instance(np.array([1.0, 2.0]))
+        bank.array_to_instance(np.array([1.0, 2.0]))
 
 
-def test_dataframe_to_theta():
+def test_dataframe_to_array():
     bank = ParameterBank(
         parameters={
             "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
@@ -134,16 +134,16 @@ def test_dataframe_to_theta():
         }
     )
     df = pd.DataFrame({"a": [0.5, 1.0, 1.5], "b": [2.5, 3.0, 3.5]})
-    theta = bank.dataframe_to_theta(df)
+    theta = bank.dataframe_to_array(df)
     assert theta.shape == (3, 2)
     assert theta[0, 0] == pytest.approx(0.5)
     assert theta[0, 1] == pytest.approx(2.5)
 
 
-def test_dataframe_to_theta_invalid_input():
+def test_dataframe_to_array_invalid_input():
     bank = ParameterBank()
     with pytest.raises(ValueError, match="must be a pandas DataFrame"):
-        bank.dataframe_to_theta([1, 2, 3])
+        bank.dataframe_to_array([1, 2, 3])
 
 
 def test_max_attempts_configurable():
@@ -174,13 +174,13 @@ def test_copy_bank():
             "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
         },
         constraints=[lambda ps: ps["a"] > 0.5],
-        theta_sampling=True,
+        array_mode=True,
         texnames={"a": r"$\alpha$"},
         max_attempts=50,
     )
     bank_copy = bank.copy()
     assert len(bank_copy) == len(bank)
-    assert bank_copy.theta_sampling == bank.theta_sampling
+    assert bank_copy.array_mode == bank.array_mode
     assert bank_copy._max_attempts == bank._max_attempts
     assert "a" in bank_copy.texnames
 
@@ -202,20 +202,20 @@ def test_sample_with_multidimensional_size():
         parameters={
             "a": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
         },
-        theta_sampling=True,
+        array_mode=True,
     )
     samples = bank.sample(size=(2, 3))
     assert samples.shape == (2, 3, 1)
 
 
-def test_sample_multidimensional_without_theta_sampling():
+def test_sample_multidimensional_without_array_mode():
     bank = ParameterBank(
         parameters={
             "a": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
         },
-        theta_sampling=False,
+        array_mode=False,
     )
-    with pytest.raises(ValueError, match="only supported for theta_sampling"):
+    with pytest.raises(ValueError, match="only supported for array_mode"):
         bank.sample(size=(2, 3))
 
 

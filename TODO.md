@@ -27,8 +27,8 @@
 - [x] Add tests for `ParameterBank.merge()`
 - [x] Add tests for `ParameterBank.add_parameter()`
 - [x] Add tests for `ParameterBank.add_constraint()`
-- [x] Add tests for `theta_to_instance()` conversions
-- [x] Add tests for `dataframe_to_theta()` conversions
+- [x] Add tests for `array_to_instance()` conversions
+- [x] Add tests for `dataframe_to_array()` conversions
 - [x] Add edge case tests:
   - [x] Empty banks
   - [x] Constraint failures
@@ -76,7 +76,7 @@
 - [ ] Ensure consistency with Python 3.12+ type syntax
 
 ### 8. Error Message Fixes
-- [x] Fix "theta_array" → "return_theta" in error message (line 481)
+- [x] Fix "theta_array" → "return_array" in error message (line 481)
 - [ ] Review all error messages for consistency and clarity
 
 ### 9. Documentation Expansion
@@ -168,9 +168,9 @@ Vector parameters will allow parameters to be Python iterables or NumPy arrays r
   - [x] `_sample_once_constrained()` works with vectors (inherits from `_sample_once()`)
   - [x] Update `sample()` to return appropriate structures with correct theta dimensions
 - [x] Update conversion methods:
-  - [x] `instance_to_theta()` - Flattens vectors into theta array
-  - [x] `theta_to_instance()` - Reshapes flat arrays back to vectors
-  - [x] `dataframe_to_theta()` - Works with existing implementation
+  - [x] `instance_to_array()` - Flattens vectors into theta array
+  - [x] `array_to_instance()` - Reshapes flat arrays back to vectors
+  - [x] `dataframe_to_array()` - Works with existing implementation
   - [x] `instances_to_dataframe()` - Stores arrays as object dtype (Option A)
   - [x] `get_default_values()` - Updated to include vector parameters
 - [x] 12 comprehensive tests - all passing

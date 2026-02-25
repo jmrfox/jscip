@@ -28,19 +28,19 @@ def test_complete_workflow_basic():
 
     total = DerivedScalarParameter(compute_sum)
 
-    # Create bank with theta_sampling for theta conversions
+    # Create bank with array_mode for theta conversions
     bank = ParameterBank(
         parameters={"x": x, "y": y, "z": z, "total": total},
         constraints=[lambda ps: ps["total"] < 10.0],
-        theta_sampling=True,
+        array_mode=True,
     )
 
-    # Sample (returns array with theta_sampling=True)
+    # Sample (returns array with array_mode=True)
     theta_sample = bank.sample()
     assert isinstance(theta_sample, np.ndarray)
 
     # Convert to full instance
-    sample = bank.theta_to_instance(theta_sample)
+    sample = bank.array_to_instance(theta_sample)
     assert isinstance(sample, ParameterSet)
     assert "x" in sample
     assert "y" in sample
@@ -54,19 +54,19 @@ def test_complete_workflow_basic():
     assert theta_batch.shape == (10, 2)
 
     # Convert to theta
-    theta = bank.instance_to_theta(sample)
+    theta = bank.instance_to_array(sample)
     assert isinstance(theta, np.ndarray)
     assert len(theta) == 2  # Only x and y are sampled
 
     # Convert back
-    reconstructed = bank.theta_to_instance(theta)
+    reconstructed = bank.array_to_instance(theta)
     assert isinstance(reconstructed, ParameterSet)
     assert reconstructed["x"] == pytest.approx(sample["x"])
     assert reconstructed["y"] == pytest.approx(sample["y"])
 
 
-def test_complete_workflow_with_theta_sampling():
-    """Test workflow with theta_sampling mode for optimization."""
+def test_complete_workflow_with_array_mode():
+    """Test workflow with array_mode mode for optimization."""
     # Create parameters
     a = IndependentScalarParameter(value=0.0, is_sampled=True, range=(-5.0, 5.0))
     b = IndependentScalarParameter(value=0.0, is_sampled=True, range=(-5.0, 5.0))
@@ -76,10 +76,10 @@ def test_complete_workflow_with_theta_sampling():
 
     obj = DerivedScalarParameter(objective)
 
-    # Create bank with theta_sampling
+    # Create bank with array_mode
     bank = ParameterBank(
         parameters={"a": a, "b": b, "objective": obj},
-        theta_sampling=True,
+        array_mode=True,
     )
 
     # Sample returns arrays
@@ -93,7 +93,7 @@ def test_complete_workflow_with_theta_sampling():
     assert theta_batch.shape == (5, 2)
 
     # Convert to full instance
-    instance = bank.theta_to_instance(theta_single)
+    instance = bank.array_to_instance(theta_single)
     assert "a" in instance
     assert "b" in instance
     assert "objective" in instance
@@ -179,23 +179,23 @@ def test_complete_workflow_copy_and_modify():
 
 def test_complete_workflow_dataframe_roundtrip():
     """Test complete workflow with DataFrame conversions."""
-    # Create bank with theta_sampling for theta conversions
+    # Create bank with array_mode for theta conversions
     bank = ParameterBank(
         parameters={
             "p1": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
             "p2": IndependentScalarParameter(2.0, is_sampled=True, range=(1.0, 3.0)),
             "p3": IndependentScalarParameter(3.0, is_sampled=False),
         },
-        theta_sampling=True,
+        array_mode=True,
     )
 
-    # Sample to theta array (theta_sampling=True returns arrays)
+    # Sample to theta array (array_mode=True returns arrays)
     theta = bank.sample(size=10)
     assert isinstance(theta, np.ndarray)
     assert theta.shape == (10, 2)  # Only p1 and p2 are sampled
 
     # Convert each row back to instance
-    instances = [bank.theta_to_instance(row) for row in theta]
+    instances = [bank.array_to_instance(row) for row in theta]
 
     # Verify roundtrip
     for i, instance in enumerate(instances):
@@ -276,13 +276,13 @@ def test_complete_workflow_constraint_failure():
 
 def test_complete_workflow_multidimensional_sampling():
     """Test workflow with multi-dimensional sampling."""
-    # Create bank with theta_sampling
+    # Create bank with array_mode
     bank = ParameterBank(
         parameters={
             "x": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
             "y": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
         },
-        theta_sampling=True,
+        array_mode=True,
     )
 
     # Sample with multi-dimensional shape
@@ -305,13 +305,13 @@ def test_complete_workflow_default_values():
     )
 
     # Get defaults as ParameterSet
-    defaults = bank.get_default_values(return_theta=False)
+    defaults = bank.get_default_values(return_array=False)
     assert isinstance(defaults, ParameterSet)
     assert defaults["a"] == pytest.approx(1.0)
     assert defaults["b"] == pytest.approx(2.0)
 
     # Get defaults as theta array
-    defaults_theta = bank.get_default_values(return_theta=True)
+    defaults_theta = bank.get_default_values(return_array=True)
     assert isinstance(defaults_theta, np.ndarray)
     assert len(defaults_theta) == 1  # Only 'a' is sampled
     assert defaults_theta[0] == pytest.approx(1.0)
@@ -338,7 +338,7 @@ def test_complete_workflow_bounds_checking():
 
     # Sample and verify all within bounds
     samples = bank.sample(size=100)
-    theta = bank.dataframe_to_theta(samples)
+    theta = bank.dataframe_to_array(samples)
 
     assert np.all(theta >= lower)
     assert np.all(theta <= upper)
