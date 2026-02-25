@@ -139,9 +139,11 @@ class ParameterBank:
         bounds = []
         for _key, param in self.parameters.items():
             if isinstance(param, IndependentScalarParameter) and param.is_sampled:
+                assert param.range is not None  # Type guard for mypy
                 bounds.append(param.range[0])
             elif isinstance(param, IndependentVectorParameter) and param.is_sampled:
                 # Vector parameter range can be tuple of arrays or scalars
+                assert param.range is not None  # Type guard for mypy
                 if isinstance(param.range[0], np.ndarray):
                     bounds.extend(param.range[0])
                 else:
@@ -158,9 +160,11 @@ class ParameterBank:
         bounds = []
         for _key, param in self.parameters.items():
             if isinstance(param, IndependentScalarParameter) and param.is_sampled:
+                assert param.range is not None  # Type guard for mypy
                 bounds.append(param.range[1])
             elif isinstance(param, IndependentVectorParameter) and param.is_sampled:
                 # Vector parameter range can be tuple of arrays or scalars
+                assert param.range is not None  # Type guard for mypy
                 if isinstance(param.range[1], np.ndarray):
                     bounds.extend(param.range[1])
                 else:
@@ -208,9 +212,15 @@ class ParameterBank:
         logger.debug("Copied ParameterBank: %s", result)
         return result
 
-    def get_value(self, key: str) -> float:
+    def get_value(self, key: str) -> float | np.ndarray:
         if key in self.parameters:
-            return self.parameters[key].value
+            param = self.parameters[key]
+            if isinstance(param, (IndependentScalarParameter, IndependentVectorParameter)):
+                return param.value
+            else:
+                raise ValueError(
+                    f"Parameter '{key}' is a derived parameter and has no fixed value."
+                )
         else:
             raise KeyError(f"Parameter '{key}' not found in the bank.")
 
@@ -447,6 +457,7 @@ class ParameterBank:
                 if isinstance(param, IndependentScalarParameter):
                     out[key] = float(theta[i])
         # recompute derived parameters
+        assert isinstance(out, ParameterSet)  # Type guard for mypy
         out = ParameterSet(
             {
                 **out,
@@ -676,6 +687,7 @@ class ParameterBank:
         result = 0.0
         for key, param in self.parameters.items():
             if isinstance(param, IndependentScalarParameter) and param.is_sampled:
+                assert param.range is not None  # Type guard for mypy
                 if not (param.range[0] <= sample[key] <= param.range[1]):
                     result = -np.inf
         if not all(sample.satisfies(c) for c in self.constraints):
