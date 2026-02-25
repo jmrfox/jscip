@@ -1,17 +1,25 @@
 from importlib.metadata import PackageNotFoundError, version
 
-from .main import (
+from .parameter_bank import ParameterBank
+from .parameter_set import ParameterSet
+from .parameters import (
     DerivedParameter,
+    DerivedScalarParameter,
+    DerivedVectorParameter,
     IndependentParameter,
-    ParameterBank,
-    ParameterSet,
+    IndependentScalarParameter,
+    IndependentVectorParameter,
 )
 
 __all__ = [
-    "IndependentParameter",
+    "IndependentScalarParameter",
+    "IndependentVectorParameter",
     "ParameterSet",
-    "DerivedParameter",
+    "DerivedScalarParameter",
     "ParameterBank",
+    "IndependentParameter",
+    "DerivedParameter",
+    "DerivedVectorParameter",
 ]
 
 try:
