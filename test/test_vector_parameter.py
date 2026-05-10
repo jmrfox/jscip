@@ -53,10 +53,18 @@ def test_vector_parameter_invalid_shape():
         IndependentVectorParameter(value=np.array([[1.0, 2.0], [3.0, 4.0]]))
 
 
-def test_vector_parameter_empty_value():
-    """Test that empty arrays are rejected."""
-    with pytest.raises(ValueError, match="cannot be empty"):
-        IndependentVectorParameter(value=[])
+def test_vector_parameter_empty_fixed():
+    """Test that an empty fixed vector parameter is allowed."""
+    vp = IndependentVectorParameter(value=[])
+    assert vp.shape == (0,)
+    assert vp.value.size == 0
+    assert not vp.is_sampled
+
+
+def test_vector_parameter_empty_sampled():
+    """Test that a zero-length sampled parameter is rejected."""
+    with pytest.raises(ValueError, match="zero-length"):
+        IndependentVectorParameter(value=[], is_sampled=True, range=(0.0, 1.0))
 
 
 def test_vector_parameter_value_outside_range():
