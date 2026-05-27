@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from scipy import stats
@@ -39,14 +39,14 @@ class IndependentParameter:
         """Get whether this parameter is sampled."""
         return self._is_sampled
 
-    def sample(self, size: int | None = None):
+    def sample(self, size: int | None = None) -> float | np.ndarray:
         """Sample from the parameter's distribution.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement sample()")
 
-    def copy(self):
+    def copy(self) -> IndependentParameter:
         """Return a copy of this parameter.
 
         Must be implemented by subclasses.
@@ -65,7 +65,7 @@ class DerivedParameter:
         is_sampled: Always False for derived parameters.
     """
 
-    def __init__(self, function):
+    def __init__(self, function: Callable[[ParameterSet], Any]) -> None:
         if not callable(function):
             raise ValueError("Function must be callable.")
         self.function = function
@@ -76,14 +76,14 @@ class DerivedParameter:
         """Get whether this parameter is sampled (always False)."""
         return self._is_sampled
 
-    def compute(self, parameters):
+    def compute(self, parameters: ParameterSet) -> Any:
         """Compute the derived value for a given parameter set.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement compute()")
 
-    def copy(self):
+    def copy(self) -> DerivedParameter:
         """Return a copy of this parameter.
 
         Must be implemented by subclasses.
@@ -161,7 +161,10 @@ class IndependentScalarParameter(IndependentParameter):
         logger.debug("Set range of IndependentScalarParameter to %s", range)
 
     def __repr__(self) -> str:
-        return f"IndependentScalarParameter(value={self.value}, range={self.range}, is_sampled={self.is_sampled})"
+        return (
+            f"IndependentScalarParameter(value={self.value}, range={self.range}, "
+            f"is_sampled={self.is_sampled})"
+        )
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -187,14 +190,16 @@ class IndependentScalarParameter(IndependentParameter):
             if not all(isinstance(x, (int, float)) for x in range):
                 raise ValueError("Range must contain only numeric values.")
             if not (range[0] <= value <= range[1]):
-                raise ValueError(f"Value {value} is not within the range {range}.")
+                raise ValueError(
+                    f"Value {value} is not within the range {range}."
+                )
         logger.debug(
             "Validated value and range of IndependentScalarParameter: value %s, range %s",
             value,
             range,
         )
 
-    def sample(self, size: int | None = None) -> float:
+    def sample(self, size: int | None = None) -> float | np.ndarray:
         """Sample from the parameter's distribution.
 
         If `is_sampled` is True, draws from a uniform distribution over
@@ -211,7 +216,9 @@ class IndependentScalarParameter(IndependentParameter):
             result = self._distribution.rvs(size=size)
         else:
             result = self.value
-        logger.debug("Sampled value from IndependentScalarParameter: %s", result)
+        logger.debug(
+            "Sampled value from IndependentScalarParameter: %s", result
+        )
         return result
 
     def copy(self) -> IndependentScalarParameter:
@@ -236,10 +243,11 @@ class DerivedScalarParameter(DerivedParameter):
     instance is formed or updated.
     """
 
-    def __init__(self, function) -> None:
+    def __init__(self, function: Callable[[ParameterSet], float]) -> None:
         super().__init__(function)
         logger.debug(
-            "Initialized DerivedScalarParameter with function %s", self.function
+            "Initialized DerivedScalarParameter with function %s",
+            self.function,
         )
 
     def __repr__(self) -> str:
@@ -355,7 +363,9 @@ class DerivedVectorParameter(DerivedParameter):
 
         # Validate output is a numpy array
         if not isinstance(result, np.ndarray):
-            raise ValueError(f"Function must return a numpy array, got {type(result)}")
+            raise ValueError(
+                f"Function must return a numpy array, got {type(result)}"
+            )
 
         # Validate output shape
         if result.shape != self._output_shape:
@@ -401,10 +411,12 @@ class IndependentVectorParameter(IndependentParameter):
 
     def __init__(
         self,
-        value: list | np.ndarray,
+        value: list[float] | np.ndarray,
         is_sampled: bool = False,
         range: (
-            tuple[list | np.ndarray, list | np.ndarray] | tuple[float, float] | None
+            tuple[list[float] | np.ndarray, list[float] | np.ndarray]
+            | tuple[float, float]
+            | None
         ) = None,
         distribution: Literal["uniform", "mvnormal"] = "uniform",
         cov: np.ndarray | None = None,
@@ -458,7 +470,9 @@ class IndependentVectorParameter(IndependentParameter):
             elif distribution == "mvnormal":
                 # Set up multivariate normal distribution
                 if self._range is None:
-                    raise ValueError("range must be provided for mvnormal distribution")
+                    raise ValueError(
+                        "range must be provided for mvnormal distribution"
+                    )
                 # Use mean as midpoint of range
                 mean = (self._range[0] + self._range[1]) / 2.0
 
@@ -474,7 +488,9 @@ class IndependentVectorParameter(IndependentParameter):
                             f"got {cov_matrix.shape}"
                         )
 
-                self._dist = stats.multivariate_normal(mean=mean, cov=cov_matrix)
+                self._dist = stats.multivariate_normal(
+                    mean=mean, cov=cov_matrix
+                )
                 self._cov = cov_matrix
             else:
                 raise ValueError(f"Unknown distribution: {distribution}")
@@ -486,7 +502,9 @@ class IndependentVectorParameter(IndependentParameter):
             distribution,
         )
 
-    def _validate_and_convert_value(self, value: list | np.ndarray) -> np.ndarray:
+    def _validate_and_convert_value(
+        self, value: list[float] | np.ndarray
+    ) -> np.ndarray:
         """Validate and convert value to 1D numpy array.
 
         Args:
@@ -509,7 +527,11 @@ class IndependentVectorParameter(IndependentParameter):
 
     def _validate_and_convert_range(
         self,
-        range: tuple[list | np.ndarray, list | np.ndarray] | tuple[float, float] | None,
+        range: (
+            tuple[list[float] | np.ndarray, list[float] | np.ndarray]
+            | tuple[float, float]
+            | None
+        ),
         n: int,
     ) -> tuple[np.ndarray, np.ndarray] | None:
         """Validate and convert range specification.
@@ -549,7 +571,9 @@ class IndependentVectorParameter(IndependentParameter):
 
         # Validate that low <= high for all elements
         if not np.all(low_arr <= high_arr):
-            raise ValueError("All low values must be <= corresponding high values")
+            raise ValueError(
+                "All low values must be <= corresponding high values"
+            )
 
         # Validate that current value is within range
         if not np.all((self._value >= low_arr) & (self._value <= high_arr)):
@@ -565,7 +589,7 @@ class IndependentVectorParameter(IndependentParameter):
         return self._value
 
     @value.setter
-    def value(self, value: list | np.ndarray) -> None:
+    def value(self, value: list[float] | np.ndarray) -> None:
         """Set the value of the parameter.
 
         Args:
@@ -589,7 +613,9 @@ class IndependentVectorParameter(IndependentParameter):
                 )
 
         self._value = new_value
-        logger.debug("Set value of IndependentVectorParameter to %s", new_value)
+        logger.debug(
+            "Set value of IndependentVectorParameter to %s", new_value
+        )
 
     @property
     def shape(self) -> tuple[int]:
@@ -635,7 +661,8 @@ class IndependentVectorParameter(IndependentParameter):
             else:
                 result = np.tile(self.value, (size, 1))
             logger.debug(
-                "Returned fixed value from IndependentVectorParameter: %s", result
+                "Returned fixed value from IndependentVectorParameter: %s",
+                result,
             )
             return result
 
@@ -664,7 +691,9 @@ class IndependentVectorParameter(IndependentParameter):
         else:
             raise ValueError(f"Unknown distribution: {self._distribution}")
 
-        logger.debug("Sampled value from IndependentVectorParameter: %s", result)
+        logger.debug(
+            "Sampled value from IndependentVectorParameter: %s", result
+        )
         return result
 
     def copy(self) -> IndependentVectorParameter:

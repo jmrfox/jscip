@@ -18,8 +18,12 @@ from jscip import (
 def test_complete_workflow_basic():
     """Test a complete workflow: create, sample, convert, validate."""
     # Create parameters
-    x = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
-    y = IndependentScalarParameter(value=2.0, is_sampled=True, range=(1.0, 3.0))
+    x = IndependentScalarParameter(
+        value=1.0, is_sampled=True, range=(0.0, 2.0)
+    )
+    y = IndependentScalarParameter(
+        value=2.0, is_sampled=True, range=(1.0, 3.0)
+    )
     z = IndependentScalarParameter(value=5.0, is_sampled=False)
 
     # Create derived parameter
@@ -68,8 +72,12 @@ def test_complete_workflow_basic():
 def test_complete_workflow_with_array_mode():
     """Test workflow with array_mode mode for optimization."""
     # Create parameters
-    a = IndependentScalarParameter(value=0.0, is_sampled=True, range=(-5.0, 5.0))
-    b = IndependentScalarParameter(value=0.0, is_sampled=True, range=(-5.0, 5.0))
+    a = IndependentScalarParameter(
+        value=0.0, is_sampled=True, range=(-5.0, 5.0)
+    )
+    b = IndependentScalarParameter(
+        value=0.0, is_sampled=True, range=(-5.0, 5.0)
+    )
 
     def objective(ps):
         return (ps["a"] - 1.0) ** 2 + (ps["b"] + 2.0) ** 2
@@ -108,14 +116,18 @@ def test_complete_workflow_with_merging():
     # Create first bank
     bank1 = ParameterBank(
         parameters={
-            "mass": IndependentScalarParameter(1.0, is_sampled=True, range=(0.5, 2.0)),
+            "mass": IndependentScalarParameter(
+                1.0, is_sampled=True, range=(0.5, 2.0)
+            ),
         }
     )
 
     # Create second bank
     bank2 = ParameterBank(
         parameters={
-            "velocity": IndependentScalarParameter(10.0, is_sampled=True, range=(5.0, 15.0)),
+            "velocity": IndependentScalarParameter(
+                10.0, is_sampled=True, range=(5.0, 15.0)
+            ),
         }
     )
 
@@ -146,7 +158,9 @@ def test_complete_workflow_copy_and_modify():
     # Create original bank
     original = ParameterBank(
         parameters={
-            "x": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
+            "x": IndependentScalarParameter(
+                1.0, is_sampled=True, range=(0.0, 2.0)
+            ),
             "y": IndependentScalarParameter(2.0, is_sampled=False),
         },
         constraints=[lambda ps: ps["x"] < 1.5],
@@ -157,7 +171,9 @@ def test_complete_workflow_copy_and_modify():
     copy = original.copy()
 
     # Modify copy
-    copy.add_parameter("z", IndependentScalarParameter(3.0, is_sampled=True, range=(2.0, 4.0)))
+    copy.add_parameter(
+        "z", IndependentScalarParameter(3.0, is_sampled=True, range=(2.0, 4.0))
+    )
     copy.add_constraint(lambda ps: ps["z"] > 2.5)
 
     # Verify original unchanged
@@ -182,8 +198,12 @@ def test_complete_workflow_dataframe_roundtrip():
     # Create bank with array_mode for theta conversions
     bank = ParameterBank(
         parameters={
-            "p1": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
-            "p2": IndependentScalarParameter(2.0, is_sampled=True, range=(1.0, 3.0)),
+            "p1": IndependentScalarParameter(
+                1.0, is_sampled=True, range=(0.0, 2.0)
+            ),
+            "p2": IndependentScalarParameter(
+                2.0, is_sampled=True, range=(1.0, 3.0)
+            ),
             "p3": IndependentScalarParameter(3.0, is_sampled=False),
         },
         array_mode=True,
@@ -209,8 +229,12 @@ def test_complete_workflow_log_prob():
     # Create bank
     bank = ParameterBank(
         parameters={
-            "x": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
-            "y": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
+            "x": IndependentScalarParameter(
+                0.5, is_sampled=True, range=(0.0, 1.0)
+            ),
+            "y": IndependentScalarParameter(
+                0.5, is_sampled=True, range=(0.0, 1.0)
+            ),
         },
         constraints=[lambda ps: ps["x"] + ps["y"] < 1.5],
     )
@@ -236,8 +260,12 @@ def test_complete_workflow_with_texnames():
     # Create bank with TeX names
     bank = ParameterBank(
         parameters={
-            "alpha": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
-            "beta": IndependentScalarParameter(2.0, is_sampled=True, range=(1.0, 3.0)),
+            "alpha": IndependentScalarParameter(
+                1.0, is_sampled=True, range=(0.0, 2.0)
+            ),
+            "beta": IndependentScalarParameter(
+                2.0, is_sampled=True, range=(1.0, 3.0)
+            ),
             "gamma": IndependentScalarParameter(3.0, is_sampled=False),
         },
         texnames={
@@ -263,14 +291,18 @@ def test_complete_workflow_constraint_failure():
     # Create bank with impossible constraints
     bank = ParameterBank(
         parameters={
-            "x": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
+            "x": IndependentScalarParameter(
+                0.5, is_sampled=True, range=(0.0, 1.0)
+            ),
         },
         constraints=[lambda ps: ps["x"] > 10.0],  # Impossible!
         max_attempts=5,
     )
 
     # Should raise RuntimeError
-    with pytest.raises(RuntimeError, match="Failed to sample.*after 5 attempts"):
+    with pytest.raises(
+        RuntimeError, match="Failed to sample.*after 5 attempts"
+    ):
         bank.sample()
 
 
@@ -279,8 +311,12 @@ def test_complete_workflow_multidimensional_sampling():
     # Create bank with array_mode
     bank = ParameterBank(
         parameters={
-            "x": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
-            "y": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
+            "x": IndependentScalarParameter(
+                0.5, is_sampled=True, range=(0.0, 1.0)
+            ),
+            "y": IndependentScalarParameter(
+                0.5, is_sampled=True, range=(0.0, 1.0)
+            ),
         },
         array_mode=True,
     )
@@ -299,7 +335,9 @@ def test_complete_workflow_default_values():
     # Create bank
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
+            "a": IndependentScalarParameter(
+                1.0, is_sampled=True, range=(0.0, 2.0)
+            ),
             "b": IndependentScalarParameter(2.0, is_sampled=False),
         }
     )
@@ -322,8 +360,12 @@ def test_complete_workflow_bounds_checking():
     # Create bank
     bank = ParameterBank(
         parameters={
-            "x": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
-            "y": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
+            "x": IndependentScalarParameter(
+                0.5, is_sampled=True, range=(0.0, 1.0)
+            ),
+            "y": IndependentScalarParameter(
+                0.5, is_sampled=True, range=(0.0, 1.0)
+            ),
         }
     )
 

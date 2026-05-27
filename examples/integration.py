@@ -10,14 +10,22 @@ This example demonstrates:
 import numpy as np
 from scipy.optimize import minimize
 
-from jscip import DerivedScalarParameter, IndependentScalarParameter, ParameterBank
+from jscip import (
+    DerivedScalarParameter,
+    IndependentScalarParameter,
+    ParameterBank,
+)
 
 # Define a simple optimization problem: minimize a quadratic function
 # f(x, y) = (x - 2)^2 + (y + 1)^2
 # Optimal solution: x=2, y=-1
 
-x_param = IndependentScalarParameter(value=0.0, is_sampled=True, range=(-5.0, 5.0))
-y_param = IndependentScalarParameter(value=0.0, is_sampled=True, range=(-5.0, 5.0))
+x_param = IndependentScalarParameter(
+    value=0.0, is_sampled=True, range=(-5.0, 5.0)
+)
+y_param = IndependentScalarParameter(
+    value=0.0, is_sampled=True, range=(-5.0, 5.0)
+)
 
 
 def compute_objective(params):

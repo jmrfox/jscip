@@ -11,7 +11,9 @@ from jscip import (
 
 
 def make_bank():
-    p1 = IndependentScalarParameter(value=0.5, is_sampled=True, range=(0.0, 1.0))
+    p1 = IndependentScalarParameter(
+        value=0.5, is_sampled=True, range=(0.0, 1.0)
+    )
     p2 = IndependentScalarParameter(value=2.0, is_sampled=False)
     d1 = DerivedScalarParameter(lambda ps: ps["p1"] * ps["p2"])  # product
     bank = ParameterBank(

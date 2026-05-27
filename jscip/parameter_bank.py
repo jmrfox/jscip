@@ -49,7 +49,9 @@ class ParameterBank:
         parameters: (
             dict[
                 str,
-                IndependentScalarParameter | IndependentVectorParameter | DerivedScalarParameter,
+                IndependentScalarParameter
+                | IndependentVectorParameter
+                | DerivedScalarParameter,
             ]
             | None
         ) = None,
@@ -84,7 +86,9 @@ class ParameterBank:
 
         # Validate texnames keys match parameter names
         if self.texnames:
-            invalid_keys = set(self.texnames.keys()) - set(self.parameters.keys())
+            invalid_keys = set(self.texnames.keys()) - set(
+                self.parameters.keys()
+            )
             if invalid_keys:
                 raise ValueError(
                     f"texnames contains keys not in parameters: {invalid_keys}. "
@@ -104,7 +108,9 @@ class ParameterBank:
         self.sampled_indices = [
             self.names.index(key)
             for key, param in self.parameters.items()
-            if isinstance(param, (IndependentScalarParameter, IndependentVectorParameter))
+            if isinstance(
+                param, (IndependentScalarParameter, IndependentVectorParameter)
+            )
             and param.is_sampled
         ]
         logger.debug("Refreshed sampled indices: %s", self.sampled_indices)
@@ -118,7 +124,9 @@ class ParameterBank:
     @property
     def sampled(self) -> list[str]:
         """Get a list of all parameters that are set to be sampled."""
-        return [key for key, param in self.parameters.items() if param.is_sampled]
+        return [
+            key for key, param in self.parameters.items() if param.is_sampled
+        ]
 
     @property
     def vector_names(self) -> list[str]:
@@ -138,10 +146,16 @@ class ParameterBank:
         """
         bounds = []
         for _key, param in self.parameters.items():
-            if isinstance(param, IndependentScalarParameter) and param.is_sampled:
+            if (
+                isinstance(param, IndependentScalarParameter)
+                and param.is_sampled
+            ):
                 assert param.range is not None  # Type guard for mypy
                 bounds.append(param.range[0])
-            elif isinstance(param, IndependentVectorParameter) and param.is_sampled:
+            elif (
+                isinstance(param, IndependentVectorParameter)
+                and param.is_sampled
+            ):
                 # Vector parameter range can be tuple of arrays or scalars
                 assert param.range is not None  # Type guard for mypy
                 if isinstance(param.range[0], np.ndarray):
@@ -159,10 +173,16 @@ class ParameterBank:
         """
         bounds = []
         for _key, param in self.parameters.items():
-            if isinstance(param, IndependentScalarParameter) and param.is_sampled:
+            if (
+                isinstance(param, IndependentScalarParameter)
+                and param.is_sampled
+            ):
                 assert param.range is not None  # Type guard for mypy
                 bounds.append(param.range[1])
-            elif isinstance(param, IndependentVectorParameter) and param.is_sampled:
+            elif (
+                isinstance(param, IndependentVectorParameter)
+                and param.is_sampled
+            ):
                 # Vector parameter range can be tuple of arrays or scalars
                 assert param.range is not None  # Type guard for mypy
                 if isinstance(param.range[1], np.ndarray):
@@ -193,7 +213,11 @@ class ParameterBank:
 
     def __getitem__(
         self, key: str
-    ) -> IndependentScalarParameter | IndependentVectorParameter | DerivedScalarParameter:
+    ) -> (
+        IndependentScalarParameter
+        | IndependentVectorParameter
+        | DerivedScalarParameter
+    ):
         """Get a parameter by its name."""
         if key in self.parameters:
             return self.parameters[key]
@@ -215,7 +239,9 @@ class ParameterBank:
     def get_value(self, key: str) -> float | np.ndarray:
         if key in self.parameters:
             param = self.parameters[key]
-            if isinstance(param, (IndependentScalarParameter, IndependentVectorParameter)):
+            if isinstance(
+                param, (IndependentScalarParameter, IndependentVectorParameter)
+            ):
                 return param.value
             else:
                 raise ValueError(
@@ -265,18 +291,24 @@ class ParameterBank:
         self._refresh_sampled_indices()
         logger.debug("Added parameter '%s' to ParameterBank: %s", name, self)
 
-    def add_constraint(self, constraint: Callable[[ParameterSet], bool]) -> None:
+    def add_constraint(
+        self, constraint: Callable[[ParameterSet], bool]
+    ) -> None:
         """Add a new constraint to the bank."""
         if not callable(constraint):
             raise ValueError("Constraint must be a callable function.")
         self.constraints.append(constraint)
-        logger.debug("Added constraint '%s' to ParameterBank: %s", constraint, self)
+        logger.debug(
+            "Added constraint '%s' to ParameterBank: %s", constraint, self
+        )
 
     def get_constraints(self) -> list[Callable[[ParameterSet], bool]]:
         """Get all constraints in the bank."""
         return self.constraints
 
-    def get_default_values(self, return_array: bool | None = None) -> ParameterSet | np.ndarray:
+    def get_default_values(
+        self, return_array: bool | None = None
+    ) -> ParameterSet | np.ndarray:
         """Return default values for all parameters.
 
         Computes a ``ParameterSet`` by taking the current ``value`` for all
@@ -304,7 +336,10 @@ class ParameterBank:
             {
                 key: param.value
                 for key, param in self.parameters.items()
-                if isinstance(param, (IndependentScalarParameter, IndependentVectorParameter))
+                if isinstance(
+                    param,
+                    (IndependentScalarParameter, IndependentVectorParameter),
+                )
             }
         )
         logger.debug(
@@ -322,13 +357,18 @@ class ParameterBank:
             }
         )
         p = self.order(p)
-        logger.debug("[get_default_values] Default values for all parameters in the bank: %s", p)
+        logger.debug(
+            "[get_default_values] Default values for all parameters in the bank: %s",
+            p,
+        )
         if return_array:
             return self.instance_to_array(p)
         else:
             return p
 
-    def instance_to_array(self, input: ParameterSet | list[ParameterSet]) -> np.ndarray:
+    def instance_to_array(
+        self, input: ParameterSet | list[ParameterSet]
+    ) -> np.ndarray:
         """Convert a parameter instance (or list) to a sampled parameter array.
 
         Args:
@@ -358,7 +398,10 @@ class ParameterBank:
                 else:
                     theta_values.append(value)
             theta = np.array(theta_values)
-            logger.debug("[instance_to_array] Converted ParameterSet to numpy array: %s", theta)
+            logger.debug(
+                "[instance_to_array] Converted ParameterSet to numpy array: %s",
+                theta,
+            )
         else:
             # return a 2D array of shape (n_instances, n_theta_dims)
             theta_list = []
@@ -414,19 +457,25 @@ class ParameterBank:
                 if ``theta`` is not a NumPy array.
         """
         if not isinstance(theta, np.ndarray):
-            raise ValueError("Input must be a numpy array, instead got: " + str(type(theta)))
+            raise ValueError(
+                "Input must be a numpy array, instead got: " + str(type(theta))
+            )
         # validate length depending on array_mode
         if self.array_mode:
             # Calculate expected theta length (accounting for vector parameters)
-            expected_len = len(self.lower_bounds)  # This already accounts for vectors
+            expected_len = len(
+                self.lower_bounds
+            )  # This already accounts for vectors
             if len(theta) != expected_len:
                 raise ValueError(
-                    f"Array length {len(theta)} does not match expected theta dimensions {expected_len}."
+                    f"Array length {len(theta)} does not match expected theta dimensions "
+                    f"{expected_len}."
                 )
         else:
             if len(theta) != len(self.parameters):
                 raise ValueError(
-                    f"Array length {len(theta)} does not match number of parameters {len(self.parameters)}."
+                    f"Array length {len(theta)} does not match number of parameters "
+                    f"{len(self.parameters)}."
                 )
         # theta in this case must be a 1D array
         # Start with defaults
@@ -450,7 +499,8 @@ class ParameterBank:
             # theta provides values for ALL parameters in canonical order
             if len(theta) != len(self.parameters):
                 raise ValueError(
-                    f"Array length {len(theta)} does not match number of parameters {len(self.parameters)}."
+                    f"Array length {len(theta)} does not match number of parameters "
+                    f"{len(self.parameters)}."
                 )
             for i, key in enumerate(self.names):
                 param = self.parameters[key]
@@ -481,7 +531,10 @@ class ParameterBank:
             {
                 key: param.sample()
                 for key, param in self.parameters.items()
-                if isinstance(param, (IndependentScalarParameter, IndependentVectorParameter))
+                if isinstance(
+                    param,
+                    (IndependentScalarParameter, IndependentVectorParameter),
+                )
             }
         )
         logger.debug(
@@ -490,9 +543,14 @@ class ParameterBank:
         )
         # then, compute all derived parameters based on the sampled independent parameters
         for key, param in self.parameters.items():
-            if isinstance(param, (DerivedScalarParameter, DerivedVectorParameter)):
+            if isinstance(
+                param, (DerivedScalarParameter, DerivedVectorParameter)
+            ):
                 p[key] = param.compute(p)
-        logger.debug("[sample_once] Sampled values for all parameters in the bank: %s", p)
+        logger.debug(
+            "[sample_once] Sampled values for all parameters in the bank: %s",
+            p,
+        )
         # put result in canonical order according to self.canonical_order
         p = self.order(p)
         return p
@@ -507,10 +565,13 @@ class ParameterBank:
             if all(sample.satisfies(c) for c in self.constraints):
                 return sample
         raise RuntimeError(
-            f"Failed to sample a parameter set satisfying constraints after {self._max_attempts} attempts."
+            f"Failed to sample a parameter set satisfying constraints after "
+            f"{self._max_attempts} attempts."
         )
 
-    def sample(self, size: int | tuple | None = None) -> ParameterSet | pd.DataFrame | np.ndarray:
+    def sample(
+        self, size: int | tuple[int, ...] | None = None
+    ) -> ParameterSet | pd.DataFrame | np.ndarray:
         """Sample parameter sets or theta arrays.
 
         Args:
@@ -525,7 +586,11 @@ class ParameterBank:
         Raises:
             ValueError: If ``size`` has an invalid type or dimensionality.
         """
-        if size is not None and not isinstance(size, int) and not isinstance(size, tuple):
+        if (
+            size is not None
+            and not isinstance(size, int)
+            and not isinstance(size, tuple)
+        ):
             raise ValueError("Size must be None, an integer, or a tuple.")
         if size is None:
             n_samples = 1
@@ -533,7 +598,9 @@ class ParameterBank:
             n_samples = size
         elif isinstance(size, tuple):
             if len(size) > 1 and not self.array_mode:
-                raise ValueError("Multiple dimensions are only supported for array_mode.")
+                raise ValueError(
+                    "Multiple dimensions are only supported for array_mode."
+                )
             if len(size) == 1:
                 n_samples = size[0]
             else:
@@ -554,7 +621,10 @@ class ParameterBank:
                         for key, param in self.parameters.items()
                         if isinstance(
                             param,
-                            (IndependentScalarParameter, IndependentVectorParameter),
+                            (
+                                IndependentScalarParameter,
+                                IndependentVectorParameter,
+                            ),
                         )
                         and not param.is_sampled
                     },
@@ -565,15 +635,19 @@ class ParameterBank:
             if size is None:
                 out = self.instance_to_array(samples[0])
             elif isinstance(size, int):
-                array_dim = len(self.lower_bounds)  # Accounts for vector parameters
-                out = np.array([self.instance_to_array(sample) for sample in samples]).reshape(
-                    (size, array_dim)
-                )
+                array_dim = len(
+                    self.lower_bounds
+                )  # Accounts for vector parameters
+                out = np.array(
+                    [self.instance_to_array(sample) for sample in samples]
+                ).reshape((size, array_dim))
             elif isinstance(size, tuple):
-                array_dim = len(self.lower_bounds)  # Accounts for vector parameters
-                out = np.array([self.instance_to_array(sample) for sample in samples]).reshape(
-                    size + (array_dim,)
-                )
+                array_dim = len(
+                    self.lower_bounds
+                )  # Accounts for vector parameters
+                out = np.array(
+                    [self.instance_to_array(sample) for sample in samples]
+                ).reshape(size + (array_dim,))
         else:
             if size is None:
                 out = samples[0]
@@ -583,7 +657,9 @@ class ParameterBank:
                 out = self.instances_to_dataframe(list(samples))
         return out
 
-    def instances_to_dataframe(self, instances: list[ParameterSet]) -> pd.DataFrame:
+    def instances_to_dataframe(
+        self, instances: list[ParameterSet]
+    ) -> pd.DataFrame:
         """Convert a list of parameter instances to a pandas DataFrame.
 
         Args:
@@ -598,11 +674,17 @@ class ParameterBank:
                 objects.
         """
         if not isinstance(instances, list):
-            raise ValueError("Instances must be a list of ParameterSetInstance objects.")
+            raise ValueError(
+                "Instances must be a list of ParameterSetInstance objects."
+            )
         if not instances:
             raise ValueError("Instances list cannot be empty.")
-        if not all(isinstance(instance, ParameterSet) for instance in instances):
-            raise ValueError("All items in instances must be ParameterSetInstance objects.")
+        if not all(
+            isinstance(instance, ParameterSet) for instance in instances
+        ):
+            raise ValueError(
+                "All items in instances must be ParameterSetInstance objects."
+            )
         df = pd.DataFrame([dict(instance) for instance in instances])
         # Don't convert to float if we have vector parameters (arrays)
         # Only convert scalar columns to float
@@ -615,7 +697,9 @@ class ParameterBank:
         df = df[self.names]  # reorder columns to canonical order
         return df
 
-    def log_prob(self, input: ParameterSet | pd.DataFrame | np.ndarray) -> float | np.ndarray:
+    def log_prob(
+        self, input: ParameterSet | pd.DataFrame | np.ndarray
+    ) -> float | np.ndarray:
         """Compute log-probability for parameter instances.
 
         Args:
@@ -632,7 +716,9 @@ class ParameterBank:
                 current ``array_mode`` mode.
         """
         # categorize inputs
-        if isinstance(input, ParameterSet):  # if a single sample, package it in a list
+        if isinstance(
+            input, ParameterSet
+        ):  # if a single sample, package it in a list
             samples = [input]
         elif isinstance(
             input, pd.DataFrame
@@ -644,29 +730,39 @@ class ParameterBank:
                     input.shape[0] != len(self.sampled) and self.array_mode
                 ):  # if array_mode is enabled, sample must match sampled parameters
                     raise ValueError(
-                        f"1D numpy array must have length {len(self.sampled)} to match sampled parameters, since array_mode is enabled."
+                        f"1D numpy array must have length {len(self.sampled)} to match sampled "
+                        f"parameters, since array_mode is enabled."
                     )
                 elif (
-                    input.shape[0] != len(self.parameters) and not self.array_mode
+                    input.shape[0] != len(self.parameters)
+                    and not self.array_mode
                 ):  # if array_mode is disabled, sample must match all parameters
                     raise ValueError(
-                        f"1D numpy array must have length {len(self.parameters)} to match all parameters, since array_mode is disabled."
+                        f"1D numpy array must have length {len(self.parameters)} to match all "
+                        f"parameters, since array_mode is disabled."
                     )
                 samples = [self.array_to_instance(input)]
             elif input.ndim == 2:  # if 2D, treat each row as a sample
                 if input.shape[1] != len(self.sampled) and self.array_mode:
                     raise ValueError(
-                        f"2D numpy array must have {len(self.sampled)} columns to match sampled parameters, since array_mode is enabled."
+                        f"2D numpy array must have {len(self.sampled)} columns to match sampled "
+                        f"parameters, since array_mode is enabled."
                     )
-                elif input.shape[1] != len(self.parameters) and not self.array_mode:
+                elif (
+                    input.shape[1] != len(self.parameters)
+                    and not self.array_mode
+                ):
                     raise ValueError(
-                        f"2D numpy array must have {len(self.parameters)} columns to match all parameters, since array_mode is disabled."
+                        f"2D numpy array must have {len(self.parameters)} columns to match all "
+                        f"parameters, since array_mode is disabled."
                     )
                 samples = [self.array_to_instance(row) for row in input]
             else:
                 raise ValueError("Samples must be a 1D or 2D numpy array.")
         elif not isinstance(input, list):
-            raise ValueError("Samples must be a list of ParameterSet instances or a numpy array.")
+            raise ValueError(
+                "Samples must be a list of ParameterSet instances or a numpy array."
+            )
 
         results = np.zeros(len(samples))
         for i, sample in enumerate(samples):
@@ -686,7 +782,10 @@ class ParameterBank:
             raise ValueError("Sample must be an instance of ParameterSet.")
         result = 0.0
         for key, param in self.parameters.items():
-            if isinstance(param, IndependentScalarParameter) and param.is_sampled:
+            if (
+                isinstance(param, IndependentScalarParameter)
+                and param.is_sampled
+            ):
                 assert param.range is not None  # Type guard for mypy
                 if not (param.range[0] <= sample[key] <= param.range[1]):
                     result = -np.inf

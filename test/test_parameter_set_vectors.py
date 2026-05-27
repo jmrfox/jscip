@@ -40,7 +40,9 @@ def test_parameterset_mixed_scalar_vector():
 
 def test_parameterset_copy_preserves_arrays():
     """Test that copy() preserves array values."""
-    original = ParameterSet({"scalar": 5.0, "vector": np.array([1.0, 2.0, 3.0])})
+    original = ParameterSet(
+        {"scalar": 5.0, "vector": np.array([1.0, 2.0, 3.0])}
+    )
 
     copy = original.copy()
 

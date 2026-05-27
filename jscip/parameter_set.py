@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -21,12 +22,13 @@ class ParameterSet(pd.Series):
     This is a thin wrapper around ``pandas.Series`` used to represent a single
     instance of parameters, typically produced by sampling a ``ParameterBank``.
     It can store both scalar values (from ``IndependentScalarParameter`` or
-    ``DerivedScalarParameter``) and vector values (from ``IndependentVectorParameter``
-    as numpy arrays). It preserves the canonical parameter ordering maintained
+    ``DerivedScalarParameter``) and vector values (from
+    ``IndependentVectorParameter`` as numpy arrays). It preserves the canonical
+    parameter ordering maintained
     by the bank when reindexed via ``ParameterBank.order``.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
     def __repr__(self) -> str:
@@ -49,17 +51,23 @@ class ParameterSet(pd.Series):
             raise ValueError("Constraint must be a callable function.")
         result = constraint(self)
         if not isinstance(result, (bool, np.bool_)):
-            raise ValueError("Constraint function must return a boolean value.")
+            raise ValueError(
+                "Constraint function must return a boolean value."
+            )
         return result
 
-    def copy(self) -> ParameterSet:
+    def copy(self, deep: bool = True) -> ParameterSet:
         """Return a copy of this parameter set.
+
+        Args:
+            deep: Whether to perform a deep copy (default: True).
 
         Returns:
             ParameterSet: A new instance with the same values.
 
         Note:
-            Numpy arrays are deep copied to prevent unintended mutations.
+            Numpy arrays are always deep copied to prevent unintended mutations,
+            regardless of the deep parameter.
         """
         # Deep copy any numpy arrays to prevent shared references
         data = {}
@@ -85,7 +93,9 @@ class ParameterSet(pd.Series):
             ValueError: If ``new_index`` is not a list or tuple.
         """
         if not isinstance(new_index, (list, tuple)):
-            raise ValueError("New index must be a list or tuple of parameter names.")
+            raise ValueError(
+                "New index must be a list or tuple of parameter names."
+            )
         new_series = super().reindex(new_index)
         result = ParameterSet(new_series)
         logger.debug("Reindexed ParameterSet: %s", result)

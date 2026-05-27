@@ -7,12 +7,20 @@ This example demonstrates:
 - Validating parameter sets
 """
 
-from jscip import DerivedScalarParameter, IndependentScalarParameter, ParameterBank
+from jscip import (
+    DerivedScalarParameter,
+    IndependentScalarParameter,
+    ParameterBank,
+)
 
 # Define parameters for a simple physics problem
 # We want to ensure total energy stays within bounds
-potential_energy = IndependentScalarParameter(value=50.0, is_sampled=True, range=(0.0, 100.0))
-kinetic_energy = IndependentScalarParameter(value=30.0, is_sampled=True, range=(0.0, 100.0))
+potential_energy = IndependentScalarParameter(
+    value=50.0, is_sampled=True, range=(0.0, 100.0)
+)
+kinetic_energy = IndependentScalarParameter(
+    value=30.0, is_sampled=True, range=(0.0, 100.0)
+)
 
 
 def compute_total_energy(params):
@@ -76,7 +84,9 @@ print(f"   Invalid sample: {bank.log_prob(invalid_sample):.1f}")
 print("\n4. Handling impossible constraints:")
 impossible_bank = ParameterBank(
     parameters={
-        "x": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
+        "x": IndependentScalarParameter(
+            0.5, is_sampled=True, range=(0.0, 1.0)
+        ),
     },
     constraints=[
         lambda ps: ps["x"] > 10.0,  # Impossible!
@@ -100,6 +110,8 @@ def custom_constraint(ps):
 
 satisfies = test_sample.satisfies(custom_constraint)
 print(f"   PE > KE? {satisfies}")
-print(f"   PE={test_sample['potential_energy']:.1f}, KE={test_sample['kinetic_energy']:.1f}")
+print(
+    f"   PE={test_sample['potential_energy']:.1f}, KE={test_sample['kinetic_energy']:.1f}"
+)
 
 print("\n" + "=" * 60)

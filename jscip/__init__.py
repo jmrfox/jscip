@@ -1,5 +1,6 @@
 from importlib.metadata import PackageNotFoundError, version
 
+from .hypergrid import HyperGrid
 from .parameter_bank import ParameterBank
 from .parameter_set import ParameterSet
 from .parameters import (
@@ -20,6 +21,7 @@ __all__ = [
     "IndependentParameter",
     "DerivedParameter",
     "DerivedVectorParameter",
+    "HyperGrid",
 ]
 
 try:

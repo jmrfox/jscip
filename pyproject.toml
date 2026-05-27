@@ -7,19 +7,20 @@ requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.3.4",
     "pandas>=2.3.3",
-    "pytest>=9.0.0",
     "scipy>=1.16.3",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.0",
+    "pytest-cov>=6.0.0",
     "mkdocs>=1.6.0",
     "mkdocs-material>=9.5.0",
     "mkdocstrings[python]>=0.25.0",
     "ruff>=0.15.2",
     "mypy>=1.19.1",
     "pandas-stubs>=2.0.0",
+    "pre-commit>=4.0.0",
 ]
 
 [build-system]
@@ -36,7 +37,7 @@ test = "pytest:main"
 testpaths = ["test"]
 
 [tool.ruff]
-line-length = 100
+line-length = 79
 target-version = "py312"
 
 [tool.ruff.lint]
@@ -58,16 +59,20 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.12"
-warn_return_any = false
+warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 check_untyped_defs = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 strict_equality = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
 
 [[tool.mypy.overrides]]
 module = "scipy.*"
@@ -76,3 +81,7 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "pandas.*"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "jscip.parameter_set"
+disable_error_code = ["override", "misc"]

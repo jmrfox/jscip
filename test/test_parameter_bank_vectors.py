@@ -13,8 +13,12 @@ from jscip import (
 
 def test_parameter_bank_with_vector_parameter():
     """Test creating a ParameterBank with a vector parameter."""
-    scalar = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
-    vector = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 5.0))
+    scalar = IndependentScalarParameter(
+        value=1.0, is_sampled=True, range=(0.0, 2.0)
+    )
+    vector = IndependentVectorParameter(
+        value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 5.0)
+    )
 
     bank = ParameterBank(parameters={"scalar": scalar, "vector": vector})
 
@@ -27,8 +31,12 @@ def test_parameter_bank_with_vector_parameter():
 def test_parameter_bank_vector_names():
     """Test vector_names property."""
     v1 = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=False)
-    v2 = IndependentVectorParameter(value=[3.0, 4.0, 5.0], is_sampled=True, range=(0.0, 10.0))
-    s1 = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
+    v2 = IndependentVectorParameter(
+        value=[3.0, 4.0, 5.0], is_sampled=True, range=(0.0, 10.0)
+    )
+    s1 = IndependentScalarParameter(
+        value=1.0, is_sampled=True, range=(0.0, 2.0)
+    )
 
     bank = ParameterBank(parameters={"v1": v1, "v2": v2, "s1": s1})
 
@@ -38,8 +46,12 @@ def test_parameter_bank_vector_names():
 
 def test_parameter_bank_lower_upper_bounds_with_vectors():
     """Test lower_bounds and upper_bounds with vector parameters."""
-    scalar = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
-    vector = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
+    scalar = IndependentScalarParameter(
+        value=1.0, is_sampled=True, range=(0.0, 2.0)
+    )
+    vector = IndependentVectorParameter(
+        value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0)
+    )
 
     bank = ParameterBank(parameters={"scalar": scalar, "vector": vector})
 
@@ -66,9 +78,13 @@ def test_parameter_bank_bounds_with_elementwise_vector_ranges():
 
 def test_parameter_bank_mixed_scalar_vector():
     """Test ParameterBank with mixed scalar and vector parameters."""
-    s1 = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
+    s1 = IndependentScalarParameter(
+        value=1.0, is_sampled=True, range=(0.0, 2.0)
+    )
     s2 = IndependentScalarParameter(value=3.0, is_sampled=False)
-    v1 = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
+    v1 = IndependentVectorParameter(
+        value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0)
+    )
     v2 = IndependentVectorParameter(value=[3.0, 4.0, 5.0], is_sampled=False)
 
     bank = ParameterBank(parameters={"s1": s1, "s2": s2, "v1": v1, "v2": v2})
@@ -81,8 +97,12 @@ def test_parameter_bank_mixed_scalar_vector():
 
 def test_parameter_bank_copy_with_vectors():
     """Test that copy() works with vector parameters."""
-    vector = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 5.0))
-    scalar = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 2.0))
+    vector = IndependentVectorParameter(
+        value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 5.0)
+    )
+    scalar = IndependentScalarParameter(
+        value=1.0, is_sampled=True, range=(0.0, 2.0)
+    )
 
     bank = ParameterBank(parameters={"vector": vector, "scalar": scalar})
     copy = bank.copy()
@@ -112,7 +132,9 @@ def test_parameter_bank_getitem_with_vectors():
 
 def test_parameter_bank_with_derived_and_vectors():
     """Test ParameterBank with derived parameters computed from vectors."""
-    position = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0))
+    position = IndependentVectorParameter(
+        value=[1.0, 2.0, 3.0], is_sampled=True, range=(0.0, 10.0)
+    )
 
     def compute_distance(ps):
         """Compute distance from origin."""
@@ -120,7 +142,9 @@ def test_parameter_bank_with_derived_and_vectors():
 
     distance = DerivedScalarParameter(compute_distance)
 
-    bank = ParameterBank(parameters={"position": position, "distance": distance})
+    bank = ParameterBank(
+        parameters={"position": position, "distance": distance}
+    )
 
     assert len(bank) == 2
     assert bank.vector_names == ["position"]
@@ -150,9 +174,15 @@ def test_parameter_bank_invalid_parameter_type():
 
 def test_parameter_bank_multiple_vectors_different_shapes():
     """Test ParameterBank with multiple vectors of different shapes."""
-    v1 = IndependentVectorParameter(value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0))
-    v2 = IndependentVectorParameter(value=[3.0, 4.0, 5.0], is_sampled=True, range=(0.0, 10.0))
-    v3 = IndependentVectorParameter(value=[6.0, 7.0, 8.0, 9.0], is_sampled=True, range=(0.0, 15.0))
+    v1 = IndependentVectorParameter(
+        value=[1.0, 2.0], is_sampled=True, range=(0.0, 5.0)
+    )
+    v2 = IndependentVectorParameter(
+        value=[3.0, 4.0, 5.0], is_sampled=True, range=(0.0, 10.0)
+    )
+    v3 = IndependentVectorParameter(
+        value=[6.0, 7.0, 8.0, 9.0], is_sampled=True, range=(0.0, 15.0)
+    )
 
     bank = ParameterBank(parameters={"v1": v1, "v2": v2, "v3": v3})
 
@@ -160,4 +190,6 @@ def test_parameter_bank_multiple_vectors_different_shapes():
     assert len(bank.lower_bounds) == 9
     assert len(bank.upper_bounds) == 9
     assert np.allclose(bank.lower_bounds, [0.0] * 9)
-    assert np.allclose(bank.upper_bounds, [5.0, 5.0, 10.0, 10.0, 10.0, 15.0, 15.0, 15.0, 15.0])
+    assert np.allclose(
+        bank.upper_bounds, [5.0, 5.0, 10.0, 10.0, 10.0, 15.0, 15.0, 15.0, 15.0]
+    )

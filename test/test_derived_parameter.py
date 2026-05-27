@@ -29,7 +29,9 @@ def test_derived_parameter_invalid_function():
 
 def test_derived_parameter_compute_invalid_input():
     dp = DerivedScalarParameter(lambda ps: ps["a"] + ps["b"])
-    with pytest.raises(ValueError, match="must be an instance of ParameterSet"):
+    with pytest.raises(
+        ValueError, match="must be an instance of ParameterSet"
+    ):
         dp.compute({"a": 1.0, "b": 2.0})
 
 

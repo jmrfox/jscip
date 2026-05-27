@@ -7,11 +7,17 @@ This example demonstrates:
 - Working with different output formats
 """
 
-from jscip import DerivedScalarParameter, IndependentScalarParameter, ParameterBank
+from jscip import (
+    DerivedScalarParameter,
+    IndependentScalarParameter,
+    ParameterBank,
+)
 
 # Define independent parameters
 mass = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.5, 2.0))
-velocity = IndependentScalarParameter(value=10.0, is_sampled=True, range=(5.0, 15.0))
+velocity = IndependentScalarParameter(
+    value=10.0, is_sampled=True, range=(5.0, 15.0)
+)
 time = IndependentScalarParameter(value=1.0, is_sampled=False)
 
 

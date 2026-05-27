@@ -37,11 +37,15 @@ def test_derived_vector_parameter_invalid_output_shape():
         DerivedVectorParameter(function=compute_vector, output_shape=[2])
 
     # Non-positive dimension
-    with pytest.raises(ValueError, match="output_shape must contain positive integers"):
+    with pytest.raises(
+        ValueError, match="output_shape must contain positive integers"
+    ):
         DerivedVectorParameter(function=compute_vector, output_shape=(0,))
 
     # Non-integer dimension
-    with pytest.raises(ValueError, match="output_shape must contain positive integers"):
+    with pytest.raises(
+        ValueError, match="output_shape must contain positive integers"
+    ):
         DerivedVectorParameter(function=compute_vector, output_shape=(2.5,))
 
 
@@ -71,7 +75,9 @@ def test_derived_vector_parameter_shape_validation():
     param = DerivedVectorParameter(function=wrong_shape, output_shape=(2,))
     params = ParameterSet({"x": 1.0})
 
-    with pytest.raises(ValueError, match="output shape .* does not match expected shape"):
+    with pytest.raises(
+        ValueError, match="output shape .* does not match expected shape"
+    ):
         param.compute(params)
 
 
@@ -90,8 +96,12 @@ def test_derived_vector_parameter_non_array_output():
 
 def test_derived_vector_parameter_in_parameter_bank():
     """Test using DerivedVectorParameter in a ParameterBank."""
-    x = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.0, 10.0))
-    y = IndependentScalarParameter(value=2.0, is_sampled=True, range=(0.0, 10.0))
+    x = IndependentScalarParameter(
+        value=1.0, is_sampled=True, range=(0.0, 10.0)
+    )
+    y = IndependentScalarParameter(
+        value=2.0, is_sampled=True, range=(0.0, 10.0)
+    )
 
     def position_vector(p):
         return np.array([p["x"], p["y"]])
@@ -127,7 +137,9 @@ def test_derived_vector_parameter_in_sample():
 
 def test_derived_vector_parameter_with_vector_input():
     """Test derived vector parameter that depends on another vector parameter."""
-    vec = IndependentVectorParameter(value=[1.0, 2.0, 3.0], is_sampled=False, range=(0.0, 10.0))
+    vec = IndependentVectorParameter(
+        value=[1.0, 2.0, 3.0], is_sampled=False, range=(0.0, 10.0)
+    )
 
     def normalized(p):
         """Normalize the input vector."""
@@ -207,5 +219,7 @@ def test_derived_vector_parameter_invalid_parameters():
 
     param = DerivedVectorParameter(function=compute_vec, output_shape=(1,))
 
-    with pytest.raises(ValueError, match="Parameters must be an instance of ParameterSet"):
+    with pytest.raises(
+        ValueError, match="Parameters must be an instance of ParameterSet"
+    ):
         param.compute({"x": 1.0})  # Dict instead of ParameterSet
