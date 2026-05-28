@@ -9,7 +9,7 @@ This module defines the core parameter types used in jscip:
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
@@ -102,6 +102,9 @@ class IndependentScalarParameter(IndependentParameter):
         value: Current scalar value of the parameter.
         is_sampled: Whether this parameter will be sampled from a distribution.
         range: Optional inclusive bounds `(low, high)` for the parameter.
+        grid_points: Number of grid points, explicit point list, or None for
+            hypergrid generation.
+        grid_scale: Spacing scale for hypergrid generation ('linear' or 'log').
 
     Raises:
         ValueError: If types are invalid, if the range is malformed, or if the
@@ -113,11 +116,18 @@ class IndependentScalarParameter(IndependentParameter):
         value: float,
         is_sampled: bool = False,
         range: tuple[float, float] | None = None,
+        grid_points: int | Sequence[float] | None = None,
+        grid_scale: Literal["linear", "log"] = "linear",
     ):
         super().__init__(is_sampled=is_sampled)
         self._validate_value_and_range(value, range)
         self._value = value
         self._range = range
+
+        # Validate and store grid configuration
+        self._validate_grid_config(grid_points, grid_scale)
+        self._grid_points = grid_points
+        self._grid_scale = grid_scale
 
         if is_sampled and (range is None or len(range) != 2):
             raise ValueError(
@@ -160,6 +170,32 @@ class IndependentScalarParameter(IndependentParameter):
         self._range = range
         logger.debug("Set range of IndependentScalarParameter to %s", range)
 
+    @property
+    def grid_points(self) -> int | Sequence[float] | None:
+        """Get the grid points configuration."""
+        return self._grid_points
+
+    @grid_points.setter
+    def grid_points(self, grid_points: int | Sequence[float] | None) -> None:
+        self._validate_grid_config(grid_points, self._grid_scale)
+        self._grid_points = grid_points
+        logger.debug(
+            "Set grid_points of IndependentScalarParameter to %s", grid_points
+        )
+
+    @property
+    def grid_scale(self) -> Literal["linear", "log"]:
+        """Get the grid scale configuration."""
+        return self._grid_scale
+
+    @grid_scale.setter
+    def grid_scale(self, grid_scale: Literal["linear", "log"]) -> None:
+        self._validate_grid_config(self._grid_points, grid_scale)
+        self._grid_scale = grid_scale
+        logger.debug(
+            "Set grid_scale of IndependentScalarParameter to %s", grid_scale
+        )
+
     def __repr__(self) -> str:
         return (
             f"IndependentScalarParameter(value={self.value}, range={self.range}, "
@@ -199,6 +235,54 @@ class IndependentScalarParameter(IndependentParameter):
             range,
         )
 
+    def _validate_grid_config(
+        self,
+        grid_points: int | Sequence[float] | None,
+        grid_scale: Literal["linear", "log"],
+    ) -> None:
+        """Validate grid configuration parameters.
+
+        Args:
+            grid_points: Number of points, explicit point list, or None.
+            grid_scale: Spacing scale ('linear' or 'log').
+
+        Raises:
+            ValueError: If grid configuration is invalid.
+        """
+        if grid_points is not None:
+            if isinstance(grid_points, int):
+                if grid_points <= 0:
+                    raise ValueError(
+                        "grid_points must be positive when specified as int."
+                    )
+            elif isinstance(grid_points, Sequence):
+                if len(grid_points) == 0:
+                    raise ValueError("grid_points sequence cannot be empty.")
+                if not all(isinstance(x, (int, float)) for x in grid_points):
+                    raise ValueError(
+                        "grid_points sequence must contain only numeric values."
+                    )
+            else:
+                raise ValueError(
+                    "grid_points must be int, Sequence[float], or None."
+                )
+
+        if grid_scale not in ["linear", "log"]:
+            raise ValueError("grid_scale must be 'linear' or 'log'.")
+
+        # Validate logarithmic scale requirements
+        if grid_scale == "log" and grid_points is not None:
+            if isinstance(grid_points, int) and self.range is not None:
+                if self.range[0] <= 0 or self.range[1] <= 0:
+                    raise ValueError(
+                        "Range must be positive for logarithmic grid scaling."
+                    )
+            elif isinstance(grid_points, Sequence):
+                if any(x <= 0 for x in grid_points):
+                    raise ValueError(
+                        "Grid points must be positive for logarithmic scaling."
+                    )
+
     def sample(self, size: int | None = None) -> float | np.ndarray:
         """Sample from the parameter's distribution.
 
@@ -226,10 +310,14 @@ class IndependentScalarParameter(IndependentParameter):
 
         Returns:
             IndependentScalarParameter: A new parameter with the same value, range,
-            and sampling flag.
+            sampling flag, and grid configuration.
         """
         result = IndependentScalarParameter(
-            value=self.value, is_sampled=self.is_sampled, range=self.range
+            value=self.value,
+            is_sampled=self.is_sampled,
+            range=self.range,
+            grid_points=self.grid_points,
+            grid_scale=self.grid_scale,
         )
         logger.debug("Copied IndependentScalarParameter: %s", result)
         return result

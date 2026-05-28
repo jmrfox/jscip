@@ -7,7 +7,7 @@ parameters with sampling, constraints, and conversions.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 
 import numpy as np
 import pandas as pd
@@ -812,6 +812,202 @@ class ParameterBank:
         except Exception as e:
             raise ValueError("Error reordering parameters: " + str(e)) from e
         return out
+
+    def compute_hypergrid(self) -> list[ParameterSet]:
+        """Generate a hypergrid over sampled scalar parameters.
+
+        Creates a Cartesian product of grid points for all sampled scalar
+        parameters with grid_points specified. Parameters without grid_points
+        are excluded from the hypergrid generation.
+
+        Returns:
+            List of ParameterSet instances covering the Cartesian product
+            of all active parameter grid points.
+
+        Raises:
+            ValueError: If no sampled parameters have grid_points specified,
+                if grid configuration is invalid, or if vector parameters
+                are marked for sampling.
+        """
+        from itertools import product
+
+        # Validate and extract active grid parameters
+        active_params = self._extract_active_grid_parameters()
+
+        if not active_params:
+            raise ValueError(
+                "No sampled parameters have grid_points specified. "
+                "At least one sampled parameter must have grid_points set."
+            )
+
+        # Generate grid points for each active parameter
+        grid_values = {}
+        for name, param in active_params.items():
+            grid_values[name] = self._generate_grid_points(param)
+
+        # Create Cartesian product
+        param_names = list(grid_values.keys())
+        param_value_lists = [grid_values[name] for name in param_names]
+        grid_points = product(*param_value_lists)
+
+        n_total_points = 1
+        for values in param_value_lists:
+            n_total_points *= len(values)
+
+        logger.info(
+            "Generating hypergrid with %d points across %d parameters",
+            n_total_points,
+            len(active_params),
+        )
+
+        # Generate ParameterSet instances
+        results = []
+        for point in grid_points:
+            try:
+                # Create parameter values for this grid point
+                param_dict = {}
+
+                # Set grid parameters
+                for i, name in enumerate(param_names):
+                    param_dict[name] = point[i]
+
+                # Set non-sampled independent parameters to their current values
+                for name, param in self.parameters.items():
+                    if not param.is_sampled and hasattr(param, "value"):
+                        param_dict[name] = param.value
+
+                # Create ParameterSet and compute derived parameters
+                base_set = ParameterSet(param_dict)
+
+                # Compute derived parameters iteratively to handle dependencies
+                current_dict = dict(base_set)
+                max_iterations = len(self.parameters)
+
+                for iteration in range(max_iterations):
+                    new_derived = {}
+                    for name, param in self.parameters.items():
+                        if (
+                            hasattr(param, "compute")
+                            and name not in current_dict
+                        ):
+                            try:
+                                temp_set = ParameterSet(current_dict)
+                                new_derived[name] = param.compute(temp_set)
+                            except KeyError:
+                                continue
+
+                    if not new_derived:
+                        break
+
+                    current_dict.update(new_derived)
+
+                # Create final ParameterSet
+                final_set = ParameterSet(current_dict)
+                ordered_set = self.order(final_set)
+                results.append(ordered_set)
+
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to generate grid point {point}: {e}"
+                ) from e
+
+        logger.info("Successfully generated %d hypergrid points", len(results))
+        return results
+
+    def _extract_active_grid_parameters(
+        self,
+    ) -> dict[str, IndependentScalarParameter]:
+        """Extract sampled scalar parameters with grid_points specified.
+
+        Returns:
+            Dictionary mapping parameter names to IndependentScalarParameter
+            instances that are active in hypergrid generation.
+
+        Raises:
+            ValueError: If vector parameters are marked for sampling.
+        """
+        # Check for vector parameters marked for sampling
+        vector_sampled = [
+            name
+            for name, param in self.parameters.items()
+            if param.is_sampled and hasattr(param, "shape")
+        ]
+
+        if vector_sampled:
+            raise ValueError(
+                f"Vector-valued parameters cannot be used in hypergrid: "
+                f"{vector_sampled}. Only scalar parameters are supported."
+            )
+
+        # Extract sampled scalar parameters with grid_points
+        active_params = {}
+        for name, param in self.parameters.items():
+            if (
+                param.is_sampled
+                and isinstance(param, IndependentScalarParameter)
+                and param.grid_points is not None
+            ):
+                active_params[name] = param
+
+        return active_params
+
+    def _generate_grid_points(
+        self, param: IndependentScalarParameter
+    ) -> list[float]:
+        """Generate grid points for a parameter based on its configuration.
+
+        Args:
+            param: IndependentScalarParameter with grid configuration.
+
+        Returns:
+            List of grid point values.
+
+        Raises:
+            ValueError: If grid configuration is invalid.
+        """
+        if param.grid_points is None:
+            raise ValueError(
+                f"Parameter {param} has no grid_points specified."
+            )
+
+        if isinstance(param.grid_points, int):
+            # Generate points automatically
+            if param.range is None:
+                raise ValueError(
+                    f"Parameter {param} must have range specified when grid_points is int."
+                )
+
+            low, high = param.range
+            if param.grid_scale == "linear":
+                points = np.linspace(low, high, param.grid_points).tolist()
+            elif param.grid_scale == "log":
+                if low <= 0 or high <= 0:
+                    raise ValueError(
+                        f"Parameter {param} must have positive range for logarithmic scaling."
+                    )
+                points = np.logspace(
+                    np.log10(low), np.log10(high), param.grid_points
+                ).tolist()
+            else:
+                raise ValueError(f"Invalid grid_scale: {param.grid_scale}")
+
+        elif isinstance(param.grid_points, Sequence):
+            # Use explicit point list
+            points = list(param.grid_points)
+
+            # Validate logarithmic scaling requirements
+            if param.grid_scale == "log":
+                if any(x <= 0 for x in points):
+                    raise ValueError(
+                        f"Parameter {param} grid points must be positive for logarithmic scaling."
+                    )
+
+        else:
+            raise ValueError(
+                f"Invalid grid_points type: {type(param.grid_points)}"
+            )
+
+        return points
 
     def pretty_print(self) -> None:
         """Print a human-readable summary of the bank configuration."""

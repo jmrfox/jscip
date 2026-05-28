@@ -1,159 +1,157 @@
-"""HyperGrid usage example for jscip.
+"""Example demonstrating integrated hypergrid functionality in ParameterBank.
 
-This example demonstrates:
-- Creating a ParameterBank with sampled scalar parameters
-- Setting up a HyperGrid for systematic evaluation
-- Working with derived parameters in the grid
-- Memory considerations for large grids
+This example shows how to use the new grid_points and grid_scale attributes
+with ParameterBank.compute_hypergrid() to generate systematic parameter grids.
 """
 
 from jscip import (
-    DerivedScalarParameter,
-    HyperGrid,
     IndependentScalarParameter,
     ParameterBank,
+    DerivedScalarParameter,
 )
 
 print("=" * 60)
-print("HyperGrid Example: Systematic Parameter Evaluation")
+print("HyperGrid Integration Example")
 print("=" * 60)
 
-# Define independent scalar parameters
-mass = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.5, 2.0))
+# Example 1: Basic linear grid
+print("\n1. Basic Linear Grid:")
+print("-" * 30)
+
+# Create parameters with grid configuration
+mass = IndependentScalarParameter(
+    value=1.0,
+    is_sampled=True,
+    range=(0.5, 2.0),
+    grid_points=3,  # Linear spacing: [0.5, 1.25, 2.0]
+)
+
 velocity = IndependentScalarParameter(
-    value=10.0, is_sampled=True, range=(5.0, 15.0)
-)
-gravity = IndependentScalarParameter(
-    value=9.81, is_sampled=False
-)  # Fixed parameter
-
-
-# Define derived parameters
-def compute_kinetic_energy(params):
-    """Compute kinetic energy: KE = 0.5 * m * v^2"""
-    return 0.5 * params["mass"] * params["velocity"] ** 2
-
-
-def compute_potential_energy(params):
-    """Compute potential energy: PE = m * g * h (assuming h=1 unit)"""
-    return params["mass"] * params["gravity"] * 1.0
-
-
-def compute_total_energy(params):
-    """Compute total mechanical energy."""
-    return params["kinetic_energy"] + params["potential_energy"]
-
-
-kinetic_energy = DerivedScalarParameter(compute_kinetic_energy)
-potential_energy = DerivedScalarParameter(compute_potential_energy)
-total_energy = DerivedScalarParameter(compute_total_energy)
-
-# Create a parameter bank
-bank = ParameterBank(
-    parameters={
-        "mass": mass,
-        "velocity": velocity,
-        "gravity": gravity,
-        "kinetic_energy": kinetic_energy,
-        "potential_energy": potential_energy,
-        "total_energy": total_energy,
-    }
+    value=10.0,
+    is_sampled=True,
+    range=(5.0, 15.0),
+    grid_points=2,  # Linear spacing: [5.0, 15.0]
 )
 
-print("\n1. Parameter Bank Configuration:")
-print(f"   Sampled parameters: {bank.sampled}")
-derived_params = [
-    name
-    for name, param in bank.parameters.items()
-    if hasattr(param, "compute")
-]
-print(f"   Derived parameters: {derived_params}")
-fixed_params = [
-    name
-    for name, param in bank.parameters.items()
-    if (not param.is_sampled) and (not hasattr(param, "compute"))
-]
-print(f"   Fixed parameters: {fixed_params}")
+# Fixed parameter (not included in grid)
+gravity = IndependentScalarParameter(value=9.81, is_sampled=False)
 
-# Create a HyperGrid with 3 points per parameter
-print("\n2. Creating HyperGrid with 3 points per parameter:")
-grid = HyperGrid(bank, n_points=3)
-print(f"   Grid parameters: {list(grid.grid_params.keys())}")
-print(f"   Total grid points: {3 ** len(grid.grid_params)}")
+# Create parameter bank
+bank = ParameterBank({"mass": mass, "velocity": velocity, "gravity": gravity})
 
-# Estimate memory usage
-memory_mb = grid._estimate_memory_usage()
-print(f"   Estimated memory usage: {memory_mb:.2f} MB")
-
-# Generate the grid
-print("\n3. Generating grid points:")
-grid_points = grid.generate()
-print(f"   Generated {len(grid_points)} grid points")
-
-# Display first few grid points
-print("\n4. First 5 grid points:")
-print("   Mass  | Velocity | KE      | PE      | Total E")
-print("   -------|----------|---------|---------|----------")
-for i, point in enumerate(grid_points[:5]):
+# Generate hypergrid
+grid = bank.compute_hypergrid()
+print(f"Generated {len(grid)} grid points")
+for i, point in enumerate(grid):
     format_str = (
-        f"   {point['mass']:5.2f} | {point['velocity']:8.2f} | "
-        f"{point['kinetic_energy']:7.2f} | {point['potential_energy']:7.2f} | "
-        f"{point['total_energy']:8.2f}"
+        f"  Point {i}: mass={point['mass']:.2f}, "
+        f"velocity={point['velocity']:.1f}, "
+        f"gravity={point['gravity']:.2f}"
     )
     print(format_str)
 
-# Find the point with maximum total energy
-print("\n5. Analysis of grid results:")
-max_energy_point = max(grid_points, key=lambda p: p["total_energy"])
-min_energy_point = min(grid_points, key=lambda p: p["total_energy"])
+# Example 2: Mixed linear and logarithmic grids
+print("\n2. Mixed Linear and Logarithmic Grids:")
+print("-" * 45)
 
-print(f"   Maximum total energy: {max_energy_point['total_energy']:.2f}")
-print(
-    f"     at mass={max_energy_point['mass']:.2f}, velocity={max_energy_point['velocity']:.2f}"
+# Linear grid parameter
+temp = IndependentScalarParameter(
+    value=300.0,
+    is_sampled=True,
+    range=(200.0, 400.0),
+    grid_points=3,  # Linear: [200, 300, 400]
+    grid_scale="linear",
 )
-print(f"   Minimum total energy: {min_energy_point['total_energy']:.2f}")
-print(
-    f"     at mass={min_energy_point['mass']:.2f}, velocity={min_energy_point['velocity']:.2f}"
+
+# Logarithmic grid parameter
+pressure = IndependentScalarParameter(
+    value=1000.0,
+    is_sampled=True,
+    range=(100.0, 10000.0),
+    grid_points=3,  # Logarithmic: [100, 1000, 10000]
+    grid_scale="log",
 )
 
-# Example with larger grid (will show memory warning)
-print("\n6. Example with larger grid (5 points per parameter):")
-large_grid = HyperGrid(bank, n_points=5)
-large_memory_mb = large_grid._estimate_memory_usage()
-print(f"   Grid points: {5 ** len(large_grid.grid_params)}")
-print(f"   Estimated memory: {large_memory_mb:.2f} MB")
+bank2 = ParameterBank({"temp": temp, "pressure": pressure})
+grid2 = bank2.compute_hypergrid()
+print(f"Generated {len(grid2)} grid points")
+for i, point in enumerate(grid2):
+    temp_str = f"temp={point['temp']:.0f}"
+    pressure_str = f"pressure={point['pressure']:.0f}"
+    print(f"  Point {i}: {temp_str}, {pressure_str}")
 
-if large_memory_mb > 100:
-    print("   ⚠️  This grid is large and may consume significant memory!")
-else:
-    print("   Generating grid...")
-    large_points = large_grid.generate()
-    print(f"   Successfully generated {len(large_points)} points")
+# Example 3: Explicit point lists
+print("\n3. Explicit Point Lists:")
+print("-" * 25)
 
-# Example of error handling
-print("\n7. Error handling examples:")
+# Parameter with explicit points
+concentration = IndependentScalarParameter(
+    value=0.5,
+    is_sampled=True,
+    range=(0.0, 1.0),
+    grid_points=[0.1, 0.5, 0.9],  # Explicit points
+)
 
-# Try to create grid with vector parameter (should fail)
-try:
-    from jscip import IndependentVectorParameter
+# Parameter with automatic generation
+ph = IndependentScalarParameter(
+    value=7.0,
+    is_sampled=True,
+    range=(6.0, 8.0),
+    grid_points=2,  # Linear: [6.0, 8.0]
+)
 
-    vector_param = IndependentVectorParameter(
-        value=[1.0, 2.0], is_sampled=True, range=(0.0, 3.0)
+bank3 = ParameterBank({"concentration": concentration, "ph": ph})
+grid3 = bank3.compute_hypergrid()
+print(f"Generated {len(grid3)} grid points")
+for i, point in enumerate(grid3):
+    print(
+        f"  Point {i}: concentration={point['concentration']:.1f}, "
+        f"ph={point['ph']:.1f}"
     )
-    bad_bank = ParameterBank({"vector": vector_param})
-    HyperGrid(bad_bank, n_points=3)
-except ValueError as e:
-    print(f"   ✅ Vector parameter correctly rejected: {e}")
 
-# Try to create grid with no sampled parameters (should fail)
-try:
-    fixed_param1 = IndependentScalarParameter(value=1.0, is_sampled=False)
-    fixed_param2 = IndependentScalarParameter(value=2.0, is_sampled=False)
-    bad_bank2 = ParameterBank({"p1": fixed_param1, "p2": fixed_param2})
-    HyperGrid(bad_bank2, n_points=3)
-except ValueError as e:
-    print(f"   ✅ No sampled parameters correctly rejected: {e}")
+# Example 4: Grid with derived parameters
+print("\n4. Grid with Derived Parameters:")
+print("-" * 35)
+
+# Independent parameters
+length = IndependentScalarParameter(
+    value=10.0, is_sampled=True, range=(5.0, 15.0), grid_points=3
+)
+
+width = IndependentScalarParameter(
+    value=5.0, is_sampled=True, range=(2.0, 8.0), grid_points=2
+)
+
+
+# Derived parameter: area = length * width
+def compute_area(params):
+    return params["length"] * params["width"]
+
+
+area = DerivedScalarParameter(compute_area)
+
+
+# Derived parameter: perimeter = 2 * (length + width)
+def compute_perimeter(params):
+    return 2 * (params["length"] + params["width"])
+
+
+perimeter = DerivedScalarParameter(compute_perimeter)
+
+bank4 = ParameterBank(
+    {"length": length, "width": width, "area": area, "perimeter": perimeter}
+)
+
+grid4 = bank4.compute_hypergrid()
+print(f"Generated {len(grid4)} grid points")
+for i, point in enumerate(grid4):
+    format_str = (
+        f"  Point {i}: length={point['length']:.1f}, "
+        f"width={point['width']:.1f}, "
+        f"area={point['area']:.1f}, perimeter={point['perimeter']:.1f}"
+    )
+    print(format_str)
 
 print("\n" + "=" * 60)
-print("HyperGrid Example Complete")
+print("HyperGrid Integration Example Complete")
 print("=" * 60)
