@@ -27,11 +27,12 @@ mass = IndependentScalarParameter(
 )
 
 velocity = IndependentScalarParameter(
-    value=10.0,
+    value=10,
     is_sampled=True,
-    range=(5.0, 15.0),
+    range=(5, 15),
     grid_points=2,  # Linear spacing: [5.0, 15.0]
-)
+    param_type="float",
+)  # explicit type setting
 
 # Fixed parameter (not included in grid)
 gravity = IndependentScalarParameter(value=9.81, is_sampled=False)
@@ -65,12 +66,13 @@ temp = IndependentScalarParameter(
 
 # Logarithmic grid parameter
 pressure = IndependentScalarParameter(
-    value=1000.0,
+    value=1000,
     is_sampled=True,
-    range=(100.0, 10000.0),
+    range=(100, 10000),
     grid_points=3,  # Logarithmic: [100, 1000, 10000]
     grid_scale="log",
-)
+    param_type="float",
+)  # explicit type setting
 
 bank2 = ParameterBank({"temp": temp, "pressure": pressure})
 grid2 = bank2.compute_hypergrid()
@@ -90,6 +92,7 @@ concentration = IndependentScalarParameter(
     is_sampled=True,
     range=(0.0, 1.0),
     grid_points=[0.1, 0.5, 0.9],  # Explicit points
+    param_type="float",
 )
 
 # Parameter with automatic generation
@@ -98,6 +101,7 @@ ph = IndependentScalarParameter(
     is_sampled=True,
     range=(6.0, 8.0),
     grid_points=2,  # Linear: [6.0, 8.0]
+    param_type="float",
 )
 
 bank3 = ParameterBank({"concentration": concentration, "ph": ph})
@@ -124,7 +128,7 @@ width = IndependentScalarParameter(
 
 
 # Derived parameter: area = length * width
-def compute_area(params):
+def compute_area(params) -> float:
     return params["length"] * params["width"]
 
 
@@ -132,7 +136,7 @@ area = DerivedScalarParameter(compute_area)
 
 
 # Derived parameter: perimeter = 2 * (length + width)
-def compute_perimeter(params):
+def compute_perimeter(params) -> float:
     return 2 * (params["length"] + params["width"])
 
 
@@ -151,6 +155,45 @@ for i, point in enumerate(grid4):
         f"area={point['area']:.1f}, perimeter={point['perimeter']:.1f}"
     )
     print(format_str)
+
+# Example 5: Type support demonstration
+print("\n5. Type Support Demonstration:")
+print("-" * 35)
+
+print(f"Mass type: {mass.param_type}")
+print(f"Velocity type: {velocity.param_type}")
+print(f"Temp type: {temp.param_type}")
+print(f"Pressure type: {pressure.param_type}")
+print(f"Length type: {length.param_type}")
+print(f"Width type: {width.param_type}")
+print(f"Area type: {area.param_type}")
+print(f"Perimeter type: {perimeter.param_type}")
+
+# Show type enforcement in grid points
+print("\nGrid point types:")
+first_point = grid[0]
+print(f"  Mass: {type(first_point['mass'])} " f"(value: {first_point['mass']})")
+print(
+    f"  Velocity: {type(first_point['velocity'])} "
+    f"(value: {first_point['velocity']})"
+)
+print(
+    f"  Gravity: {type(first_point['gravity'])} " f"(value: {first_point['gravity']})"
+)
+
+# Auto-detection example
+auto_int_param = IndependentScalarParameter(value=42, grid_points=2)
+auto_float_param = IndependentScalarParameter(value=3.14, grid_points=2)
+auto_bool_param = IndependentScalarParameter(value=True, grid_points=2)
+
+print("\nAuto-detected grid parameter types:")
+print(f"  Auto int: {auto_int_param.param_type} (grid: {auto_int_param.grid_points})")
+print(
+    f"  Auto float: {auto_float_param.param_type} (grid: {auto_float_param.grid_points})"
+)
+print(
+    f"  Auto bool: {auto_bool_param.param_type} (grid: {auto_bool_param.grid_points})"
+)
 
 print("\n" + "=" * 60)
 print("HyperGrid Integration Example Complete")

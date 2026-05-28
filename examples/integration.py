@@ -20,12 +20,8 @@ from jscip import (
 # f(x, y) = (x - 2)^2 + (y + 1)^2
 # Optimal solution: x=2, y=-1
 
-x_param = IndependentScalarParameter(
-    value=0.0, is_sampled=True, range=(-5.0, 5.0)
-)
-y_param = IndependentScalarParameter(
-    value=0.0, is_sampled=True, range=(-5.0, 5.0)
-)
+x_param = IndependentScalarParameter(value=0.0, is_sampled=True, range=(-5.0, 5.0))
+y_param = IndependentScalarParameter(value=0.0, is_sampled=True, range=(-5.0, 5.0))
 
 
 def compute_objective(params):
@@ -108,7 +104,7 @@ print(f"   Upper bounds: {bank.upper_bounds}")
 
 # 5. Random sampling for Monte Carlo
 print("\n5. Monte Carlo sampling:")
-n_samples = 10000
+n_samples = 2000
 samples = bank.sample(size=n_samples)
 print(f"   Generated {n_samples} samples")
 print(f"   Sample shape: {samples.shape}")

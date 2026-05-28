@@ -29,9 +29,7 @@ def test_derived_parameter_invalid_function():
 
 def test_derived_parameter_compute_invalid_input():
     dp = DerivedScalarParameter(lambda ps: ps["a"] + ps["b"])
-    with pytest.raises(
-        ValueError, match="must be an instance of ParameterSet"
-    ):
+    with pytest.raises(ValueError, match="must be an instance of ParameterSet"):
         dp.compute({"a": 1.0, "b": 2.0})
 
 
@@ -43,6 +41,8 @@ def test_derived_parameter_copy():
     dp_copy = dp.copy()
     assert dp_copy.function == dp.function
     assert dp_copy.is_sampled == dp.is_sampled
+    ps = ParameterSet({"a": 5.0})
+    assert dp_copy.compute(ps) == pytest.approx(dp.compute(ps))
 
 
 def test_derived_parameter_repr():

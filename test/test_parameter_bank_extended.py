@@ -12,9 +12,7 @@ from jscip import (
 def test_merge_banks():
     bank1 = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                1.0, is_sampled=True, range=(0.0, 2.0)
-            ),
+            "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
         }
     )
     bank2 = ParameterBank(
@@ -30,9 +28,7 @@ def test_merge_banks():
 
 def test_merge_invalid_type():
     bank = ParameterBank()
-    with pytest.raises(
-        ValueError, match="must be an instance of ParameterBank"
-    ):
+    with pytest.raises(ValueError, match="must be an instance of ParameterBank"):
         bank.merge("not a bank")
 
 
@@ -59,9 +55,7 @@ def test_add_parameter_invalid_type():
 def test_add_constraint():
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                1.0, is_sampled=True, range=(0.0, 2.0)
-            )
+            "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0))
         }
     )
 
@@ -87,9 +81,7 @@ def test_get_constraints():
 
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                0.5, is_sampled=True, range=(0.0, 1.0)
-            )
+            "a": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0))
         },
         constraints=[constraint1, constraint2],
     )
@@ -102,9 +94,7 @@ def test_get_constraints():
 def test_array_to_instance_with_array_mode():
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                1.0, is_sampled=True, range=(0.0, 2.0)
-            ),
+            "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
             "b": IndependentScalarParameter(3.0, is_sampled=False),
         },
         array_mode=True,
@@ -118,9 +108,7 @@ def test_array_to_instance_with_array_mode():
 def test_array_to_instance_without_array_mode():
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                1.0, is_sampled=True, range=(0.0, 2.0)
-            ),
+            "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
             "b": IndependentScalarParameter(3.0, is_sampled=False),
         },
         array_mode=False,
@@ -134,9 +122,7 @@ def test_array_to_instance_without_array_mode():
 def test_array_to_instance_invalid_length():
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                1.0, is_sampled=True, range=(0.0, 2.0)
-            ),
+            "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
         },
         array_mode=True,
     )
@@ -147,12 +133,8 @@ def test_array_to_instance_invalid_length():
 def test_dataframe_to_array():
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                1.0, is_sampled=True, range=(0.0, 2.0)
-            ),
-            "b": IndependentScalarParameter(
-                3.0, is_sampled=True, range=(2.0, 4.0)
-            ),
+            "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
+            "b": IndependentScalarParameter(3.0, is_sampled=True, range=(2.0, 4.0)),
         }
     )
     df = pd.DataFrame({"a": [0.5, 1.0, 1.5], "b": [2.5, 3.0, 3.5]})
@@ -171,17 +153,13 @@ def test_dataframe_to_array_invalid_input():
 def test_max_attempts_configurable():
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                0.5, is_sampled=True, range=(0.0, 1.0)
-            ),
+            "a": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
         },
         constraints=[lambda ps: ps["a"] > 10.0],  # impossible constraint
         max_attempts=5,
     )
     assert bank._max_attempts == 5
-    with pytest.raises(
-        RuntimeError, match="Failed to sample.*after 5 attempts"
-    ):
+    with pytest.raises(RuntimeError, match="Failed to sample.*after 5 attempts"):
         bank.sample()
 
 
@@ -197,9 +175,7 @@ def test_max_attempts_invalid():
 def test_copy_bank():
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                1.0, is_sampled=True, range=(0.0, 2.0)
-            ),
+            "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
         },
         constraints=[lambda ps: ps["a"] > 0.5],
         array_mode=True,
@@ -211,28 +187,30 @@ def test_copy_bank():
     assert bank_copy.array_mode == bank.array_mode
     assert bank_copy._max_attempts == bank._max_attempts
     assert "a" in bank_copy.texnames
+    assert len(bank_copy.constraints) == len(bank.constraints)
+    # copied bank must be able to sample and respect the constraint
+    sample = bank_copy.array_to_instance(bank_copy.sample())
+    assert sample["a"] > 0.5
 
 
 def test_pretty_print(capsys):
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                1.0, is_sampled=True, range=(0.0, 2.0)
-            ),
+            "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
         }
     )
     bank.pretty_print()
     captured = capsys.readouterr()
     assert "ParameterBank" in captured.out
     assert "a:" in captured.out
+    assert "is_sampled=True" in captured.out
+    assert "(0.0, 2.0)" in captured.out
 
 
 def test_sample_with_multidimensional_size():
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                0.5, is_sampled=True, range=(0.0, 1.0)
-            ),
+            "a": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
         },
         array_mode=True,
     )
@@ -243,9 +221,7 @@ def test_sample_with_multidimensional_size():
 def test_sample_multidimensional_without_array_mode():
     bank = ParameterBank(
         parameters={
-            "a": IndependentScalarParameter(
-                0.5, is_sampled=True, range=(0.0, 1.0)
-            ),
+            "a": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
         },
         array_mode=False,
     )
@@ -276,9 +252,7 @@ def test_texnames_validation():
     assert bank.texnames["alpha"] == r"$\alpha$"
 
     # Invalid texnames - key not in parameters
-    with pytest.raises(
-        ValueError, match="texnames contains keys not in parameters"
-    ):
+    with pytest.raises(ValueError, match="texnames contains keys not in parameters"):
         ParameterBank(
             parameters={"a": IndependentScalarParameter(1.0)},
             texnames={"a": r"$a$", "b": r"$b$"},  # 'b' doesn't exist

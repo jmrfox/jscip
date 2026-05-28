@@ -29,15 +29,93 @@ class IndependentParameter:
 
     Attributes:
         is_sampled: Whether this parameter will be sampled from a distribution.
+        param_type: Optional explicit type override ('int', 'float', 'bool').
     """
 
-    def __init__(self, is_sampled: bool = False):
+    def __init__(
+        self,
+        is_sampled: bool = False,
+        param_type: Literal["int", "float", "bool"] | None = None,
+    ):
         self._is_sampled = is_sampled
+        if param_type is not None and param_type not in ["int", "float", "bool"]:
+            raise ValueError("param_type must be 'int', 'float', 'bool', or None")
+        self._param_type = param_type
 
     @property
     def is_sampled(self) -> bool:
         """Get whether this parameter is sampled."""
         return self._is_sampled
+
+    @property
+    def param_type(self) -> Literal["int", "float", "bool"] | None:
+        """Get the explicit type override for this parameter."""
+        return self._param_type
+
+    @param_type.setter
+    def param_type(self, param_type: Literal["int", "float", "bool"] | None) -> None:
+        """Set the explicit type override for this parameter."""
+        if param_type is not None and param_type not in ["int", "float", "bool"]:
+            raise ValueError("param_type must be 'int', 'float', 'bool', or None")
+        self._param_type = param_type
+
+    def _detect_type_from_value(self, value: Any) -> Literal["int", "float", "bool"]:
+        """Detect type from a value.
+
+        Args:
+            value: The value to detect type from.
+
+        Returns:
+            Detected type as 'int', 'float', or 'bool'.
+        """
+        if isinstance(value, bool):
+            return "bool"
+        elif isinstance(value, int) and not isinstance(value, bool):
+            return "int"
+        elif isinstance(value, float):
+            return "float"
+        elif isinstance(value, np.ndarray):
+            # For numpy arrays, detect from the first element
+            if value.size == 0:
+                raise ValueError("Cannot detect type from empty array")
+            first_element = value.flat[0]
+            return self._detect_type_from_value(first_element)
+        elif isinstance(value, (list, tuple)):
+            # For sequences, detect from the first element
+            if len(value) == 0:
+                raise ValueError("Cannot detect type from empty sequence")
+            return self._detect_type_from_value(value[0])
+        else:
+            # Try to convert to int first, then float
+            try:
+                int(value)
+                return "int"
+            except (ValueError, TypeError):
+                try:
+                    float(value)
+                    return "float"
+                except (ValueError, TypeError):
+                    raise ValueError(f"Cannot detect type from value: {value}")
+
+    def _apply_type_constraint(self, value: Any) -> Any:
+        """Apply type constraint to a value.
+
+        Args:
+            value: The value to apply type constraint to.
+
+        Returns:
+            Value converted to the appropriate type.
+        """
+        target_type = self._param_type or self._detect_type_from_value(value)
+
+        if target_type == "int":
+            return int(value)
+        elif target_type == "float":
+            return float(value)
+        elif target_type == "bool":
+            return bool(value)
+        else:
+            raise ValueError(f"Unknown target type: {target_type}")
 
     def sample(self, size: int | None = None) -> float | np.ndarray:
         """Sample from the parameter's distribution.
@@ -113,13 +191,24 @@ class IndependentScalarParameter(IndependentParameter):
 
     def __init__(
         self,
-        value: float,
+        value: Any,
         is_sampled: bool = False,
         range: tuple[float, float] | None = None,
         grid_points: int | Sequence[float] | None = None,
         grid_scale: Literal["linear", "log"] = "linear",
+        param_type: Literal["int", "float", "bool"] | None = None,
     ):
-        super().__init__(is_sampled=is_sampled)
+        super().__init__(is_sampled=is_sampled, param_type=param_type)
+
+        # Apply type constraint to the initial value
+        if param_type is not None:
+            value = self._apply_type_constraint(value)
+        else:
+            # Auto-detect and set type from value
+            detected_type = self._detect_type_from_value(value)
+            self._param_type = detected_type
+            value = self._apply_type_constraint(value)
+
         self._validate_value_and_range(value, range)
         self._value = value
         self._range = range
@@ -149,12 +238,14 @@ class IndependentScalarParameter(IndependentParameter):
         )
 
     @property
-    def value(self) -> float:
+    def value(self) -> Any:
         """Get the value of the parameter."""
         return self._value
 
     @value.setter
-    def value(self, value: float) -> None:
+    def value(self, value: Any) -> None:
+        # Apply type constraint
+        value = self._apply_type_constraint(value)
         self._validate_value_and_range(value, self.range)
         self._value = value
         logger.debug("Set value of IndependentScalarParameter to %s", value)
@@ -179,9 +270,7 @@ class IndependentScalarParameter(IndependentParameter):
     def grid_points(self, grid_points: int | Sequence[float] | None) -> None:
         self._validate_grid_config(grid_points, self._grid_scale)
         self._grid_points = grid_points
-        logger.debug(
-            "Set grid_points of IndependentScalarParameter to %s", grid_points
-        )
+        logger.debug("Set grid_points of IndependentScalarParameter to %s", grid_points)
 
     @property
     def grid_scale(self) -> Literal["linear", "log"]:
@@ -192,9 +281,7 @@ class IndependentScalarParameter(IndependentParameter):
     def grid_scale(self, grid_scale: Literal["linear", "log"]) -> None:
         self._validate_grid_config(self._grid_points, grid_scale)
         self._grid_scale = grid_scale
-        logger.debug(
-            "Set grid_scale of IndependentScalarParameter to %s", grid_scale
-        )
+        logger.debug("Set grid_scale of IndependentScalarParameter to %s", grid_scale)
 
     def __repr__(self) -> str:
         return (
@@ -226,9 +313,7 @@ class IndependentScalarParameter(IndependentParameter):
             if not all(isinstance(x, (int, float)) for x in range):
                 raise ValueError("Range must contain only numeric values.")
             if not (range[0] <= value <= range[1]):
-                raise ValueError(
-                    f"Value {value} is not within the range {range}."
-                )
+                raise ValueError(f"Value {value} is not within the range {range}.")
         logger.debug(
             "Validated value and range of IndependentScalarParameter: value %s, range %s",
             value,
@@ -263,9 +348,7 @@ class IndependentScalarParameter(IndependentParameter):
                         "grid_points sequence must contain only numeric values."
                     )
             else:
-                raise ValueError(
-                    "grid_points must be int, Sequence[float], or None."
-                )
+                raise ValueError("grid_points must be int, Sequence[float], or None.")
 
         if grid_scale not in ["linear", "log"]:
             raise ValueError("grid_scale must be 'linear' or 'log'.")
@@ -293,16 +376,22 @@ class IndependentScalarParameter(IndependentParameter):
             size: Optional number of samples. If omitted, returns a scalar.
 
         Returns:
-            float | numpy.ndarray: A single float if `size is None`, otherwise
-            a NumPy array of samples.
+            float | numpy.ndarray: A single value if `size is None`,
+                otherwise a NumPy array of samples.
         """
         if self.is_sampled:
             result = self._distribution.rvs(size=size)
         else:
             result = self.value
-        logger.debug(
-            "Sampled value from IndependentScalarParameter: %s", result
-        )
+
+        # Apply type constraint to sampled values
+        if size is None:
+            result = self._apply_type_constraint(result)
+        else:
+            # For arrays, apply type constraint element-wise
+            result = np.array([self._apply_type_constraint(x) for x in result])
+
+        logger.debug("Sampled value from IndependentScalarParameter: %s", result)
         return result
 
     def copy(self) -> IndependentScalarParameter:
@@ -318,6 +407,7 @@ class IndependentScalarParameter(IndependentParameter):
             range=self.range,
             grid_points=self.grid_points,
             grid_scale=self.grid_scale,
+            param_type=self.param_type,
         )
         logger.debug("Copied IndependentScalarParameter: %s", result)
         return result
@@ -331,17 +421,28 @@ class DerivedScalarParameter(DerivedParameter):
     instance is formed or updated.
     """
 
-    def __init__(self, function: Callable[[ParameterSet], float]) -> None:
+    def __init__(
+        self,
+        function: Callable[[ParameterSet], Any],
+        param_type: Literal["int", "float", "bool"] | None = None,
+    ) -> None:
         super().__init__(function)
+        self._param_type = param_type
         logger.debug(
-            "Initialized DerivedScalarParameter with function %s",
+            "Initialized DerivedScalarParameter with function %s, " "param_type %s",
             self.function,
+            param_type,
         )
+
+    @property
+    def param_type(self) -> Literal["int", "float", "bool"] | None:
+        """Get the explicit type override for this derived parameter."""
+        return self._param_type
 
     def __repr__(self) -> str:
         return f"DerivedScalarParameter(function={self.function.__name__})"
 
-    def compute(self, parameters: ParameterSet) -> float:
+    def compute(self, parameters: ParameterSet) -> Any:
         """Compute the derived scalar value for a given parameter set.
 
         Args:
@@ -355,8 +456,18 @@ class DerivedScalarParameter(DerivedParameter):
         if not isinstance(parameters, ParameterSet):
             raise ValueError("Parameters must be an instance of ParameterSet.")
         result = self.function(parameters)
+
+        # Apply type constraint if param_type is specified
+        if self._param_type is not None:
+            if self._param_type == "int":
+                result = int(result)
+            elif self._param_type == "float":
+                result = float(result)
+            elif self._param_type == "bool":
+                result = bool(result)
+
         logger.debug("Computed value of DerivedScalarParameter: %s", result)
-        return float(result)
+        return result
 
     def copy(self) -> DerivedScalarParameter:
         """Return a shallow copy preserving the underlying function.
@@ -364,7 +475,9 @@ class DerivedScalarParameter(DerivedParameter):
         Returns:
             DerivedScalarParameter: A new wrapper around the same function.
         """
-        result = DerivedScalarParameter(function=self.function)
+        result = DerivedScalarParameter(
+            function=self.function, param_type=self.param_type
+        )
         logger.debug("Copied DerivedScalarParameter: %s", result)
         return result
 
@@ -451,9 +564,7 @@ class DerivedVectorParameter(DerivedParameter):
 
         # Validate output is a numpy array
         if not isinstance(result, np.ndarray):
-            raise ValueError(
-                f"Function must return a numpy array, got {type(result)}"
-            )
+            raise ValueError(f"Function must return a numpy array, got {type(result)}")
 
         # Validate output shape
         if result.shape != self._output_shape:
@@ -499,7 +610,7 @@ class IndependentVectorParameter(IndependentParameter):
 
     def __init__(
         self,
-        value: list[float] | np.ndarray,
+        value: list[Any] | np.ndarray,
         is_sampled: bool = False,
         range: (
             tuple[list[float] | np.ndarray, list[float] | np.ndarray]
@@ -508,6 +619,7 @@ class IndependentVectorParameter(IndependentParameter):
         ) = None,
         distribution: Literal["uniform", "mvnormal"] = "uniform",
         cov: np.ndarray | None = None,
+        param_type: Literal["int", "float", "bool"] | None = None,
     ):
         """Initialize a IndependentVectorParameter.
 
@@ -527,11 +639,32 @@ class IndependentVectorParameter(IndependentParameter):
                 distribution parameters are invalid.
         """
         # Call base class constructor
-        super().__init__(is_sampled=is_sampled)
+        super().__init__(is_sampled=is_sampled, param_type=param_type)
 
-        # Convert value to numpy array and validate
+        # First validate and convert to numpy array to check shape
+        temp_value = self._validate_and_convert_value(value)
+        self._shape = temp_value.shape
+
+        # Apply type constraints to vector elements
+        if param_type is not None:
+            # Apply type constraint to all elements
+            value = np.array([self._apply_type_constraint(x) for x in temp_value])
+        else:
+            # Auto-detect type from first element and apply to all
+            if temp_value.size > 0:
+                # For auto-detection, check the original input type
+                # before numpy conversion
+                if isinstance(value, (list, tuple)) and len(value) > 0:
+                    detected_type = self._detect_type_from_value(value[0])
+                else:
+                    detected_type = self._detect_type_from_value(temp_value.flat[0])
+                self._param_type = detected_type
+                value = np.array([self._apply_type_constraint(x) for x in temp_value])
+            else:
+                value = temp_value
+
+        # Convert value to numpy array with appropriate dtype
         self._value = self._validate_and_convert_value(value)
-        self._shape = self._value.shape
 
         # Validate and store range
         self._range = self._validate_and_convert_range(range, self._shape[0])
@@ -558,9 +691,7 @@ class IndependentVectorParameter(IndependentParameter):
             elif distribution == "mvnormal":
                 # Set up multivariate normal distribution
                 if self._range is None:
-                    raise ValueError(
-                        "range must be provided for mvnormal distribution"
-                    )
+                    raise ValueError("range must be provided for mvnormal distribution")
                 # Use mean as midpoint of range
                 mean = (self._range[0] + self._range[1]) / 2.0
 
@@ -576,9 +707,7 @@ class IndependentVectorParameter(IndependentParameter):
                             f"got {cov_matrix.shape}"
                         )
 
-                self._dist = stats.multivariate_normal(
-                    mean=mean, cov=cov_matrix
-                )
+                self._dist = stats.multivariate_normal(mean=mean, cov=cov_matrix)
                 self._cov = cov_matrix
             else:
                 raise ValueError(f"Unknown distribution: {distribution}")
@@ -590,9 +719,7 @@ class IndependentVectorParameter(IndependentParameter):
             distribution,
         )
 
-    def _validate_and_convert_value(
-        self, value: list[float] | np.ndarray
-    ) -> np.ndarray:
+    def _validate_and_convert_value(self, value: list[Any] | np.ndarray) -> np.ndarray:
         """Validate and convert value to 1D numpy array.
 
         Args:
@@ -604,7 +731,16 @@ class IndependentVectorParameter(IndependentParameter):
         Raises:
             ValueError: If value is not 1D or contains non-numeric values.
         """
-        arr = np.asarray(value, dtype=float)
+        # Convert to numpy array with appropriate dtype based on param_type
+        if self._param_type == "int":
+            arr = np.asarray(value, dtype=int)
+        elif self._param_type == "float":
+            arr = np.asarray(value, dtype=float)
+        elif self._param_type == "bool":
+            arr = np.asarray(value, dtype=bool)
+        else:
+            # Don't force float when auto-detecting - let numpy infer
+            arr = np.asarray(value)
 
         if arr.ndim != 1:
             raise ValueError(
@@ -659,9 +795,7 @@ class IndependentVectorParameter(IndependentParameter):
 
         # Validate that low <= high for all elements
         if not np.all(low_arr <= high_arr):
-            raise ValueError(
-                "All low values must be <= corresponding high values"
-            )
+            raise ValueError("All low values must be <= corresponding high values")
 
         # Validate that current value is within range
         if not np.all((self._value >= low_arr) & (self._value <= high_arr)):
@@ -677,7 +811,7 @@ class IndependentVectorParameter(IndependentParameter):
         return self._value
 
     @value.setter
-    def value(self, value: list[float] | np.ndarray) -> None:
+    def value(self, value: list[Any] | np.ndarray) -> None:
         """Set the value of the parameter.
 
         Args:
@@ -686,6 +820,14 @@ class IndependentVectorParameter(IndependentParameter):
         Raises:
             ValueError: If value is invalid or outside range.
         """
+        # Apply type constraints to vector elements
+        if self._param_type is not None:
+            # Apply type constraint to all elements
+            if isinstance(value, list):
+                value = [self._apply_type_constraint(x) for x in value]
+            else:
+                value = np.array([self._apply_type_constraint(x) for x in value])
+
         new_value = self._validate_and_convert_value(value)
 
         if new_value.shape != self._shape:
@@ -701,9 +843,7 @@ class IndependentVectorParameter(IndependentParameter):
                 )
 
         self._value = new_value
-        logger.debug(
-            "Set value of IndependentVectorParameter to %s", new_value
-        )
+        logger.debug("Set value of IndependentVectorParameter to %s", new_value)
 
     @property
     def shape(self) -> tuple[int]:
@@ -779,9 +919,20 @@ class IndependentVectorParameter(IndependentParameter):
         else:
             raise ValueError(f"Unknown distribution: {self._distribution}")
 
-        logger.debug(
-            "Sampled value from IndependentVectorParameter: %s", result
-        )
+        # Apply type constraints to sampled values
+        if self._param_type is not None:
+            if size is None:
+                result = np.array([self._apply_type_constraint(x) for x in result])
+            else:
+                # Apply type constraints element-wise to each sample
+                result = np.array(
+                    [
+                        [self._apply_type_constraint(x) for x in sample]
+                        for sample in result
+                    ]
+                )
+
+        logger.debug("Sampled value from IndependentVectorParameter: %s", result)
         return result
 
     def copy(self) -> IndependentVectorParameter:
@@ -807,6 +958,7 @@ class IndependentVectorParameter(IndependentParameter):
             range=range_copy,
             distribution=self._distribution,  # Use _distribution to get Literal type
             cov=cov_copy,
+            param_type=self.param_type,
         )
         logger.debug("Copied IndependentVectorParameter: %s", result)
         return result

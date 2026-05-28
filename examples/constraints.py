@@ -7,10 +7,13 @@ This example demonstrates:
 - Validating parameter sets
 """
 
+import numpy as np
+
 from jscip import (
     DerivedScalarParameter,
     IndependentScalarParameter,
     ParameterBank,
+    ParameterSet,
 )
 
 # Define parameters for a simple physics problem
@@ -23,9 +26,9 @@ kinetic_energy = IndependentScalarParameter(
 )
 
 
-def compute_total_energy(params):
+def compute_total_energy(params: ParameterSet) -> float:
     """Total energy is sum of potential and kinetic"""
-    return params["potential_energy"] + params["kinetic_energy"]
+    return float(params["potential_energy"] + params["kinetic_energy"])
 
 
 total_energy = DerivedScalarParameter(compute_total_energy)
@@ -72,21 +75,28 @@ for idx, row in samples.head(3).iterrows():
 # Check log probability
 print("\n3. Log probability (uniform prior):")
 valid_sample = samples.iloc[0]
-print(f"   Valid sample: {bank.log_prob(valid_sample):.1f}")
+# Convert DataFrame row to ParameterSet for log_prob
+valid_param_set = ParameterSet(valid_sample.to_dict())
+log_prob_result = bank.log_prob([valid_param_set])
+if isinstance(log_prob_result, np.ndarray):
+    log_prob_result = log_prob_result[0]
+print(f"   Valid sample: {log_prob_result:.1f}")
 
 # Create an invalid sample (violates constraints)
 invalid_sample = valid_sample.copy()
 invalid_sample["kinetic_energy"] = 5.0  # Too low relative to total
 invalid_sample["total_energy"] = 55.0
-print(f"   Invalid sample: {bank.log_prob(invalid_sample):.1f}")
+invalid_param_set = ParameterSet(invalid_sample.to_dict())
+log_prob_invalid = bank.log_prob([invalid_param_set])
+if isinstance(log_prob_invalid, np.ndarray):
+    log_prob_invalid = log_prob_invalid[0]
+print(f"   Invalid sample: {log_prob_invalid:.1f}")
 
 # Demonstrate constraint failure handling
 print("\n4. Handling impossible constraints:")
 impossible_bank = ParameterBank(
     parameters={
-        "x": IndependentScalarParameter(
-            0.5, is_sampled=True, range=(0.0, 1.0)
-        ),
+        "x": IndependentScalarParameter(0.5, is_sampled=True, range=(0.0, 1.0)),
     },
     constraints=[
         lambda ps: ps["x"] > 10.0,  # Impossible!
@@ -104,8 +114,8 @@ print("\n5. Manual constraint checking:")
 test_sample = bank.sample()
 
 
-def custom_constraint(ps):
-    return ps["potential_energy"] > ps["kinetic_energy"]
+def custom_constraint(ps: ParameterSet) -> bool:
+    return float(ps["potential_energy"]) > float(ps["kinetic_energy"])
 
 
 satisfies = test_sample.satisfies(custom_constraint)

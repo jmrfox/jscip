@@ -1,7 +1,7 @@
 """Example demonstrating IndependentVectorParameter usage in jscip.
 
-This example shows how to use IndependentVectorParameter for array-valued parameters
-with multivariate distributions.
+This example shows how to use IndependentVectorParameter for array-valued
+parameters with multivariate distributions and explicit type support.
 """
 
 import numpy as np
@@ -19,7 +19,7 @@ print("-" * 70)
 position = IndependentVectorParameter(
     value=[1.0, 2.0, 3.0],
     is_sampled=False,
-)
+)  # implicit type support
 
 print(f"Position: {position.value}")
 print(f"Shape: {position.shape}")
@@ -30,11 +30,12 @@ print("\n2. Uniform Sampling with Uniform Range")
 print("-" * 70)
 
 velocity = IndependentVectorParameter(
-    value=[0.0, 0.0, 0.0],
+    value=[0, 0, 0],
     is_sampled=True,
-    range=(-10.0, 10.0),  # Same range for all components
+    range=(-10, 10),  # Same range for all components
     distribution="uniform",
-)
+    param_type="float",
+)  # explicit type support
 
 print(f"Initial velocity: {velocity.value}")
 print("Range (all components): [-10.0, 10.0]")
@@ -83,9 +84,8 @@ correlated_params = IndependentVectorParameter(
 )
 
 print("Distribution: Multivariate normal (independent components)")
-print(
-    f"Mean (center of range): {(correlated_params.range[0] + correlated_params.range[1]) / 2.0}"
-)
+mean_center = (correlated_params.range[0] + correlated_params.range[1]) / 2.0
+print(f"Mean (center of range): {mean_center}")
 
 samples = correlated_params.sample(size=100)
 print(f"\n100 samples shape: {samples.shape}")

@@ -290,3 +290,7 @@ class TestHypergridIntegration:
         # Test invalid grid_scale
         with pytest.raises(ValueError, match="grid_scale must be 'linear' or 'log'"):
             param.grid_scale = "invalid"  # type: ignore[assignment]
+
+        # Test invalid grid_points value (zero)
+        with pytest.raises(ValueError, match="grid_points must be positive"):
+            param.grid_points = 0

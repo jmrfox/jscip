@@ -5,31 +5,33 @@ This example demonstrates:
 - Building a parameter bank
 - Sampling parameter configurations
 - Working with different output formats
+- Type detection and override functionality
 """
 
 from jscip import (
     DerivedScalarParameter,
     IndependentScalarParameter,
     ParameterBank,
+    ParameterSet,
 )
 
 # Define independent parameters
 mass = IndependentScalarParameter(value=1.0, is_sampled=True, range=(0.5, 2.0))
 velocity = IndependentScalarParameter(
-    value=10.0, is_sampled=True, range=(5.0, 15.0)
-)
+    value=10, is_sampled=True, range=(5, 15), param_type="float"
+)  # optional type override
 time = IndependentScalarParameter(value=1.0, is_sampled=False)
 
 
 # Define derived parameters
-def compute_kinetic_energy(params):
+def compute_kinetic_energy(params: ParameterSet) -> float:
     """Compute kinetic energy: KE = 0.5 * m * v^2"""
-    return 0.5 * params["mass"] * params["velocity"] ** 2
+    return float(0.5 * params["mass"] * params["velocity"] ** 2)
 
 
-def compute_distance(params):
+def compute_distance(params: ParameterSet) -> float:
     """Compute distance: d = v * t"""
-    return params["velocity"] * params["time"]
+    return float(params["velocity"] * params["time"])
 
 
 kinetic_energy = DerivedScalarParameter(compute_kinetic_energy)

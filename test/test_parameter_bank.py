@@ -11,9 +11,7 @@ from jscip import (
 
 
 def make_bank():
-    p1 = IndependentScalarParameter(
-        value=0.5, is_sampled=True, range=(0.0, 1.0)
-    )
+    p1 = IndependentScalarParameter(value=0.5, is_sampled=True, range=(0.0, 1.0))
     p2 = IndependentScalarParameter(value=2.0, is_sampled=False)
     d1 = DerivedScalarParameter(lambda ps: ps["p1"] * ps["p2"])  # product
     bank = ParameterBank(
@@ -40,6 +38,11 @@ def test_sample_dataframe_multiple():
     assert isinstance(df, pd.DataFrame)
     assert df.shape == (10, 3)
     assert set(df.columns) == {"p1", "p2", "d1"}
+    assert (df["p1"] >= 0.2).all()  # constraint: p1 >= 0.2
+    np.testing.assert_allclose(
+        df["d1"].values,
+        (df["p1"] * df["p2"]).values,
+    )  # derived value correctness
 
 
 def test_log_prob_inside_and_outside():
@@ -59,3 +62,7 @@ def test_instances_to_dataframe():
     df = bank.instances_to_dataframe(samples)
     assert isinstance(df, pd.DataFrame)
     assert df.shape == (2, 3)
+    assert df.iloc[0]["p1"] == pytest.approx(0.25)
+    assert df.iloc[0]["d1"] == pytest.approx(0.5)
+    assert df.iloc[1]["p1"] == pytest.approx(0.75)
+    assert df.iloc[1]["d1"] == pytest.approx(1.5)
