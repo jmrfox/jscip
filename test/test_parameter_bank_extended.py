@@ -9,7 +9,7 @@ from jscip import (
 )
 
 
-def test_merge_banks():
+def test_merge_no_collision():
     bank1 = ParameterBank(
         parameters={
             "a": IndependentScalarParameter(1.0, is_sampled=True, range=(0.0, 2.0)),
@@ -24,6 +24,77 @@ def test_merge_banks():
     assert "a" in bank1
     assert "b" in bank1
     assert len(bank1) == 2
+
+
+def test_merge_collision_raises():
+    bank1 = ParameterBank(
+        parameters={
+            "a": IndependentScalarParameter(1.0, is_sampled=False),
+        }
+    )
+    bank2 = ParameterBank(
+        parameters={
+            "a": IndependentScalarParameter(2.0, is_sampled=False),
+        }
+    )
+    with pytest.raises(KeyError, match="parameter\\(s\\) already exist"):
+        bank1.merge(bank2)
+    assert bank1["a"].value == 1.0
+
+
+def test_merge_overwrite():
+    bank1 = ParameterBank(
+        parameters={
+            "a": IndependentScalarParameter(1.0, is_sampled=False),
+            "b": IndependentScalarParameter(3.0, is_sampled=False),
+        }
+    )
+    bank2 = ParameterBank(
+        parameters={
+            "a": IndependentScalarParameter(2.0, is_sampled=False),
+            "c": IndependentScalarParameter(4.0, is_sampled=False),
+        }
+    )
+    bank1.merge(bank2, on_collision="overwrite")
+    assert bank1["a"].value == 2.0
+    assert bank1["b"].value == 3.0
+    assert bank1["c"].value == 4.0
+    assert len(bank1) == 3
+
+
+def test_merge_underwrite():
+    bank1 = ParameterBank(
+        parameters={
+            "a": IndependentScalarParameter(1.0, is_sampled=False),
+            "b": IndependentScalarParameter(3.0, is_sampled=False),
+        }
+    )
+    bank2 = ParameterBank(
+        parameters={
+            "a": IndependentScalarParameter(2.0, is_sampled=False),
+            "c": IndependentScalarParameter(4.0, is_sampled=False),
+        }
+    )
+    bank1.merge(bank2, on_collision="underwrite")
+    assert bank1["a"].value == 1.0
+    assert bank1["b"].value == 3.0
+    assert bank1["c"].value == 4.0
+    assert len(bank1) == 3
+
+
+def test_merge_invalid_on_collision():
+    bank1 = ParameterBank(
+        parameters={
+            "a": IndependentScalarParameter(1.0, is_sampled=False),
+        }
+    )
+    bank2 = ParameterBank(
+        parameters={
+            "b": IndependentScalarParameter(2.0, is_sampled=False),
+        }
+    )
+    with pytest.raises(ValueError, match="on_collision must be one of"):
+        bank1.merge(bank2, on_collision="replace")  # type: ignore[arg-type]
 
 
 def test_merge_invalid_type():

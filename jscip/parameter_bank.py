@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Iterator, Sequence
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -232,14 +233,53 @@ class ParameterBank:
         else:
             raise KeyError(f"Parameter '{key}' not found in the bank.")
 
-    def merge(self, other: ParameterBank) -> None:
-        """Merge another ParameterBank into this one.
-        If a parameter with the same name exists, it will be overwritten.
+    def merge(
+        self,
+        other: ParameterBank,
+        on_collision: Literal["error", "overwrite", "underwrite"] = "error",
+    ) -> None:
+        """Merge another ParameterBank into this one in place.
+
+        Parameters from ``other`` are copied into this bank. Constraints from
+        ``other`` are always appended.
+
+        Args:
+            other: The ParameterBank to merge into this one.
+            on_collision: How to handle parameters with the same name:
+                ``"error"`` (default) raises ``KeyError``;
+                ``"overwrite"`` replaces existing parameters with copies from
+                ``other``;
+                ``"underwrite"`` keeps existing parameters and only adds new
+                names from ``other``.
+
+        Raises:
+            ValueError: If ``other`` is not a ParameterBank or
+                ``on_collision`` is invalid.
+            KeyError: If ``on_collision`` is ``"error"`` and any parameter
+                names overlap.
         """
         if not isinstance(other, ParameterBank):
             raise ValueError("Other must be an instance of ParameterBank.")
+        if on_collision not in ("error", "overwrite", "underwrite"):
+            raise ValueError(
+                "on_collision must be one of 'error', 'overwrite', or "
+                "'underwrite'."
+            )
+
+        if on_collision == "error":
+            conflicts = set(self.parameters) & set(other.parameters)
+            if conflicts:
+                sorted_conflicts = sorted(conflicts)
+                raise KeyError(
+                    "Cannot merge ParameterBank: parameter(s) already exist: "
+                    f"{sorted_conflicts}"
+                )
+
         for key, value in other.parameters.items():
+            if on_collision == "underwrite" and key in self.parameters:
+                continue
             self.parameters[key] = value.copy()
+
         self.constraints.extend(other.constraints)
         self._refresh_sampled_indices()
         logger.debug("Merged ParameterBank: %s", self)
